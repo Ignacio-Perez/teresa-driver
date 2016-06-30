@@ -1,0 +1,13 @@
+Header header
+
+float32 elec_bat_voltage
+float32 PC1_bat_voltage
+float32 cable_bat_voltage
+float32 motor_voltage
+float32 motor_h_voltage
+float32 motor_l_voltage
+
+int32 elec_instant_current
+int32 motor_instant_current
+int32 elec_integrated_current
+int32 motor_integrated_current
