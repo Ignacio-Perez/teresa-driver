@@ -372,7 +372,7 @@ inline
 bool IdMindRobot::setVelocity(double linear, double angular)
 {
 	linear=saturateLinearVelocity(linear);
-	angular=saturateLinearVelocity(angular);
+	angular=saturateAngularVelocity(angular);
 	double left_wheel_velocity = saturateLinearVelocity(linear - ROBOT_RADIUS_M*angular);
 	double right_wheel_velocity = saturateLinearVelocity(linear + ROBOT_RADIUS_M*angular);
 	int v_left=0;
