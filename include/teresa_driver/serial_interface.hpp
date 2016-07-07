@@ -98,7 +98,6 @@ inline bool SerialInterface::open(int baudrate, int mode )
 		(cfsetospeed (&attr, baudrate) != -1) &&
 		(cfsetispeed (&attr, baudrate) != -1) &&
 		(tcflush(fd, TCIOFLUSH) != -1);	
-	std::cout<<"SUCCESS: "<<success<<std::endl;
 	if (success) {
 		attr.c_cflag &= ~(PARENB | CSTOPB | CSIZE);
 		attr.c_cflag |= (CS8 | CLOCAL | CREAD);

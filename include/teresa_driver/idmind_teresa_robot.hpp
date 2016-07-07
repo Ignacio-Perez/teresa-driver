@@ -77,7 +77,6 @@ public:
 			void (*printError)(const std::string& message));
 	~IdMindBoard();
 	bool open();
-	bool isOpen();
 	bool communicate(int command_size, int response_size);
 	const std::string& getName() const {return name;}
 	unsigned char command[512];
@@ -162,7 +161,7 @@ IdMindBoard::IdMindBoard(const std::string& device, const std::string& name,
   name(name),
   printInfo(printInfo),
   printError(printError),
-  counter(0){}
+  counter(-1){}
 
 inline
 IdMindBoard::~IdMindBoard()
@@ -186,12 +185,6 @@ bool IdMindBoard::open()
 	std::string version((const char*)response+1,25);
 	printInfo(name+" firmware version: "+version);
 	return true;
-}
-
-inline
-bool IdMindBoard::isOpen()
-{
-	return board.isOpen();
 }
 
 inline
@@ -221,25 +214,26 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 		printError("Communication with "+name+ " aborted due to maximum writting tries reached");
 		return false;
 	}
-	i=0;
-	int read_bytes;
-	while (i<READING_TRIES && (read_bytes=board.read(response, response_size))==-1) {
-		printError("Cannot read from "+name);
-		i++;
-	}
-	if (i==READING_TRIES) {
-		printError("Communication with "+name+ " aborted due to maximum reading tries reached");
-		return false;
-	}
-	if (read_bytes!=response_size) {
-		printError("Invalid response size from "+name);
-		return false;
-	}
+	
+	int read_bytes=0;
+	while (read_bytes<response_size) {
+		int aux = board.read(response+read_bytes,response_size-read_bytes);
+		if (aux==-1) {
+			printError("Communication with "+name+ " aborted due to reading error");
+			return false;
+		}
+		read_bytes += aux;
+	}	
+	
 	if (response[0] != command[0]) {
 		printError("Invalid response header from "+name);
 		return false;
 	}
-	counter++;
+	if (counter==-1) {
+		counter = response[response_size-3]; 
+	} else {
+		counter++;
+	}
 	if (counter==256) {
 		counter=0;
 	}
@@ -266,11 +260,11 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
   printError(printError),
   is_stopped(true)
 {
-	IdMindRobot::board1.open();
-	IdMindRobot::board2.open();
+	bool board1_open = IdMindRobot::board1.open();
+	bool board2_open = IdMindRobot::board2.open();
 	
-	if (!IdMindRobot::board1.isOpen() || 
-		!IdMindRobot::board2.isOpen() || 
+	if (!board1_open || 
+		!board2_open || 
 		!enableDCDC(dcdc_mask) ||
 		!setFans(true) ||
 		!setNumberOfLeds(number_of_leds)) {
