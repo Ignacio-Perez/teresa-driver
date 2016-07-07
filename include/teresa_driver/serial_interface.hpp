@@ -48,7 +48,7 @@ class SerialInterface
 public:
 	SerialInterface(const std::string& devicename, bool hardware_flow_control);
 	virtual ~SerialInterface();
-	virtual bool open(int baudrate = 115200, int mode = O_RDWR | O_NOCTTY | O_NDELAY);
+	virtual bool open(int baudrate = B115200, int mode = O_RDWR | O_NOCTTY | O_NDELAY);
 	virtual bool close();
 	bool isOpen();
 	const std::string& getLastError();
@@ -92,13 +92,13 @@ inline bool SerialInterface::open(int baudrate, int mode )
 		return false;	
 	}
 	struct termios attr;
-	bool success =  ((fd = ::open(devicename.c_str(), mode)) != -1) && 
+	bool success =  ((fd = ::open(devicename.c_str(), mode)) != -1) &&
 		(fcntl(fd, F_SETFL, 0) != -1) &&
 		(tcgetattr(fd, &attr) != -1) &&
 		(cfsetospeed (&attr, baudrate) != -1) &&
 		(cfsetispeed (&attr, baudrate) != -1) &&
 		(tcflush(fd, TCIOFLUSH) != -1);	
-
+	std::cout<<"SUCCESS: "<<success<<std::endl;
 	if (success) {
 		attr.c_cflag &= ~(PARENB | CSTOPB | CSIZE);
 		attr.c_cflag |= (CS8 | CLOCAL | CREAD);
