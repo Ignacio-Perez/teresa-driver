@@ -238,7 +238,7 @@ void Node::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
 inline
 void Node::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
 {
-	teresa->setHeight(stalk_ref->head_height);
+	teresa->setHeight(stalk_ref->head_height*1000);
         teresa->setTilt(stalk_ref->head_tilt);
 }
 
@@ -286,7 +286,8 @@ void Node::loop()
 	bool first_time=true;
 	double height_in_meters;
 	double tilt_in_radians;
-	bool button1,button2;
+	bool button1=false,button2=false;
+	bool button1_tmp,button2_tmp;
 	int rotaryEncoder;
 	unsigned char elec_level, PC1_level, motorH_level, motorL_level, charger_status;
 	int temperature_left_motor,temperature_right_motor,temperature_left_driver,temperature_right_driver;
@@ -323,9 +324,7 @@ void Node::loop()
 			lin_vel = imd / dt;
 			pos_x += imd*std::cos(yaw + ang_vel*dt/2);
 			pos_y += imd*std::sin(yaw + ang_vel*dt/2);
-		} else {
-			first_time = false;
-		}
+		} 
 		
 		if (head_up) {
 			teresa->incHeight();
@@ -408,7 +407,10 @@ void Node::loop()
 		}
 
 		//publish the state of the buttons
-		if (publish_buttons &&	teresa->getButtons(button1,button2) && (button1 || button2)) {
+		if (publish_buttons &&	teresa->getButtons(button1_tmp,button2_tmp) && 
+			(first_time || button1!=button1_tmp || button2!=button2_tmp)) {
+			button1 = button1_tmp;
+			button2 = button2_tmp;
 			teresa_driver::Buttons buttonsmsg;
 			buttonsmsg.header.stamp = current_time;
 			buttonsmsg.button1=button1;
@@ -457,7 +459,7 @@ void Node::loop()
 			diagnosticsmsg.motor_integrated_current = diagnostics.motor_integrated_current;
 			diagnostics_pub.publish(diagnosticsmsg);
 		}
-		
+		first_time=false;
 		r.sleep();	
 		ros::spinOnce();
 	}	

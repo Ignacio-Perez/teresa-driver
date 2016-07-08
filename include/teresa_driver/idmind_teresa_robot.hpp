@@ -30,6 +30,7 @@
 #include <vector>
 #include "teresa_robot.hpp"
 #include "serial_interface.hpp"
+#include "timer.hpp"
 
 
 namespace Teresa
@@ -82,6 +83,7 @@ public:
 	unsigned char response[512];
 private:
 	bool checksum(int response_size);
+	bool flush();
 	utils::SerialInterface board;
 	std::string name;
 	void (*printInfo)(const std::string& message);
@@ -202,11 +204,24 @@ bool IdMindBoard::checksum(int response_size)
 	return checksum1 == checksum2;	
 }
 
-
+inline
+bool IdMindBoard::flush()
+{
+	int bytes;
+	if (!board.incomingBytes(bytes)) {
+		printError("Cannot get incoming bytes, flush aborted");
+		return false;
+	}
+	if (bytes>0) {
+		board.read(response,bytes);
+	}
+	return true;
+}
 
 inline
 bool IdMindBoard::communicate(int command_size, int response_size)
 {
+	flush();
 	int i=0;
 	while(i<WRITTING_TRIES && !board.write(command,command_size)) {
 		printError("Cannot write to "+name);
@@ -218,13 +233,32 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 	}
 	
 	int read_bytes=0;
+	int bytes;
+	utils::Timer timer;
+	bool counting_timeout=false;
 	while (read_bytes<response_size) {
-		int aux = board.read(response+read_bytes,response_size-read_bytes);
-		if (aux==-1) {
-			printError("Communication with "+name+ " aborted due to reading error");
+		if (!board.incomingBytes(bytes)) {
+			printError("Communication with "+name+ " aborted due to reading error (cannot get incoming bytes)");
 			return false;
 		}
-		read_bytes += aux;
+		if (bytes==0) {
+			if (!counting_timeout) {
+				counting_timeout=true;				
+				timer.init();
+			} else if (timer.elapsed()>0.1) {
+				printError("Communication with "+name+ " aborted due to reading timeout");
+				return false;
+			}
+		} else {
+			counting_timeout=false;
+			bytes = std::min(bytes,response_size-read_bytes);
+			int aux = board.read(response+read_bytes,bytes);
+			if (aux==-1) {
+				printError("Communication with "+name+ " aborted due to reading error");
+				return false;
+			}
+			read_bytes += aux;
+		}
 	}	
 	
 	if (response[0] != command[0]) {
@@ -245,6 +279,7 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 	}
 	if (!checksum(response_size)) {
 		printError("Invalid checksum from "+name);
+		return false;
 	}
 	return true;
 }
@@ -568,7 +603,7 @@ bool IdMindRobot::getHeight(double& height)
 {
 	board2.command[0] = GET_HEIGHT_ACTUAL_POSITION;
 	if (!board2.communicate(1,8)) {
-		printError("Cannot set height");
+		printError("Cannot get height");
 		return false;
 	}
 	height = (double)bufferToInt(board2.response+1);
@@ -621,7 +656,7 @@ bool IdMindRobot::getTemperature(int& leftMotor,
 					bool& heightDriverOverheat)
 {
 	board2.command[0] = GET_TEMPERATURE_SENSORS;
-	if (!board2.communicate(1,8)) {
+	if (!board2.communicate(1,9)) {
 		printError("Cannot get temperature sensors");
 		return false;
 	}
@@ -713,22 +748,22 @@ bool IdMindRobot::getPowerDiagnostics(PowerDiagnostics& diagnostics)
 		return false;
 	}
 
-	diagnostics.elec_bat_voltage = (double)(int8_t)board1.response[1]/10.0;
-	diagnostics.PC1_bat_voltage = (double)(int8_t)board1.response[2]/10.0;
-	diagnostics.cable_bat_voltage = (double)(int8_t)board1.response[3]/10.0;
-	diagnostics.motor_voltage = (double)bufferToInt(board1.response+4)/10.0;
-	diagnostics.motor_h_voltage = (double)(int8_t)board1.response[6]/10.0;
-	diagnostics.motor_l_voltage = (double)(int8_t)board1.response[7]/10.0;
+	diagnostics.elec_bat_voltage = (double)board1.response[1]/10.0;
+	diagnostics.PC1_bat_voltage = (double)board1.response[2]/10.0;
+	diagnostics.cable_bat_voltage = (double)board1.response[3]/10.0;
+	diagnostics.motor_voltage = (double)bufferToUnsignedInt(board1.response+4)/10.0;
+	diagnostics.motor_h_voltage = (double)board1.response[6]/10.0;
+	diagnostics.motor_l_voltage = (double)board1.response[7]/10.0;
 
 	board1.command[0]=GET_POWER_CURRENT;
 	if (!board1.communicate(1,12)) {
 		printError("Cannot get power current information");
 		return false;
 	}
-	diagnostics.elec_instant_current = bufferToInt(board1.response+1);
-	diagnostics.motor_instant_current = bufferToInt(board1.response+3);
-	diagnostics.elec_integrated_current = bufferToInt(board1.response+5);
-	diagnostics.motor_integrated_current = bufferToInt(board1.response+7);
+	diagnostics.elec_instant_current = bufferToUnsignedInt(board1.response+1);
+	diagnostics.motor_instant_current = bufferToUnsignedInt(board1.response+3);
+	diagnostics.elec_integrated_current = bufferToUnsignedInt(board1.response+5);
+	diagnostics.motor_integrated_current = bufferToUnsignedInt(board1.response+7);
 	return true;
 }	
 

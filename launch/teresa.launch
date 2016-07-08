@@ -4,6 +4,10 @@
    <!-- This launch roscore -->
    <master auto="start"/>
 
+  <!-- IMU -->
+  <node pkg="receive_xsens" type="receive_xsens" name="receive_xsens" output="screen" respawn="true" />
+
+
   <!-- teresa driver -->  
 
    <node pkg="teresa_driver" type="teresa_node" name="teresa_node" output="screen" respawn="false">
@@ -14,14 +18,14 @@
    <param name="head_frame_id" type="str" value="/teresa_head"/>
    <param name="stalk_frame_id" type="str" value="/stalk_head"/>                  
    <param name="freq" type="double" value="50.0" />               
-   <param name="using_imu" type="int" value="0"/>                   
+   <param name="using_imu" type="int" value="1"/>                   
    <param name="simulation" type="int" value="0"/>
-   <param name="publish_temperature" type="int" value="0"/>
+   <param name="publish_temperature" type="int" value="1"/>
    <param name="publish_buttons" type="int" value="1"/>
    <param name="publish_volume" type="int" value="1"/>
    <param name="publish_power_diagnostics" type="int" value="1"/>
    <param name="number_of_leds" type="int" value="38"/>
-   <param name="initial_dcdc_mask" type="int" value="255"/>
+   <param name="initial_dcdc_mask" type="int" value="243"/>
    <param name="final_dcdc_mask" type="int" value="243"/>	
    </node>
 
