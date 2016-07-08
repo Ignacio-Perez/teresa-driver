@@ -50,7 +50,9 @@ namespace Teresa
 // BOARD2 COMMANDS
 #define SET_MOTOR_VELOCITY           0x30
 #define SET_TILT_POSITION_DEGREES    0x31
+#define SET_TILT_VELOCITY            0x33
 #define SET_HEIGHT_POSITION_MM       0x34
+#define SET_HEIGHT_VELOCITY          0x36
 #define SET_FANS                     0x37
 #define SET_CALIBRATION              0x38
 #define SET_TILT_DRIVER_STATE        0x39
@@ -109,14 +111,12 @@ public:
 	virtual bool setVelocity(double linear, double angular);
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
-	virtual bool incHeight();
-	virtual bool decHeight();
-	virtual bool incTilt();
-	virtual bool decTilt();
-	virtual bool setHeight(double height);
-	virtual bool setTilt(double tilt);
-	virtual bool getHeight(double& height);
-	virtual bool getTilt(double& tilt);
+	virtual bool setHeightVelocity(int velocity);
+	virtual bool setTiltVelocity(int velocity);
+	virtual bool setHeight(int height);
+	virtual bool setTilt(int tilt);
+	virtual bool getHeight(int& height);
+	virtual bool getTilt(int& tilt);
 	virtual bool getButtons(bool& button1, bool& button2);
 	virtual bool getRotaryEncoder(int& rotaryEncoder);
 	virtual bool getTemperature(int& leftMotor, 
@@ -153,6 +153,7 @@ private:
 
 	bool is_stopped;
 	int final_dcdc_mask;
+	
 
 };
 
@@ -413,6 +414,42 @@ bool IdMindRobot::enableHeightMotor(bool enable)
 }
 
 inline
+bool IdMindRobot::setHeightVelocity(int velocity)
+{
+	if (velocity<0 || velocity>30) {
+		printError("Invalid height velocity");
+		return false;
+	}
+	uint16_t v_ref = velocity==0?0:(uint16_t)std::round(0.75 * (double)velocity); 
+	board2.command[0] = SET_HEIGHT_VELOCITY;
+	board2.command[1] = (unsigned char)(v_ref >> 8);
+	board2.command[2] = (unsigned char)(v_ref & 0xFF);
+	if (!board2.communicate(3,4)) {
+		printError("Cannot set height velocity");
+		return false;
+	}
+	return true;
+}
+
+inline
+bool IdMindRobot::setTiltVelocity(int velocity)
+{
+	if (velocity<0 || velocity>3) {
+		printError("Invalid tilt velocity");
+		return false;
+	}
+	uint16_t v_ref = velocity==0?0:(uint16_t)std::round(4.9075 * (double)velocity - 0.8732); 
+	board2.command[0] = SET_TILT_VELOCITY;
+	board2.command[1] = (unsigned char)(v_ref >> 8);
+	board2.command[2] = (unsigned char)(v_ref & 0xFF);
+	if (!board2.communicate(3,4)) {
+		printError("Cannot set tilt velocity");
+		return false;
+	}
+	return true;
+}
+
+inline
 bool IdMindRobot::calibrate(bool calibrate_tilt_system, bool calibrate_height_system)
 {
 	board2.command[0] = SET_CALIBRATION;
@@ -477,115 +514,9 @@ bool IdMindRobot::getIMD(double& imdl, double& imdr)
 }
 
 inline
-bool IdMindRobot::incHeight()
-{ /*
-	board2.command[0] = GET_HEIGHT_ACTUAL_POSITION;
-	if (!board2.communicate(1,8)) {
-		printError("Cannot get height position");
-		return false;
-	}
-	int16_t height_mm = bufferToInt(board2.response+1);
-	if (height_mm==MAX_HEIGHT_MM) {
-		return true;
-	}
-	height_mm = std::min(MAX_HEIGHT_MM,height_mm+10);
-	board2.command[0] = SET_HEIGHT_POSITION_MM;
-	board2.command[1] = (unsigned char)(height_mm >> 8);
-	board2.command[2] = (unsigned char)(height_mm & 0xFF);
-	if (!board2.communicate(3,4)) {
-		printError("Cannot increment height");
-		return false;
-	}
-	return true;
-	*/
-	
-	
-	return setHeight(MAX_HEIGHT_MM);
-}
-
-
-inline
-bool IdMindRobot::decHeight()
+bool IdMindRobot::setHeight(int height)
 {
-	/*
-	board2.command[0] = GET_HEIGHT_ACTUAL_POSITION;
-	if (!board2.communicate(1,8)) {
-		printError("Cannot get height position");
-		return false;
-	}
-	int16_t height_mm = bufferToInt(board2.response+1);
-	if (height_mm==MIN_HEIGHT_MM) {
-		return true;
-	}
-	height_mm = std::max(MIN_HEIGHT_MM,height_mm-10);
-	board2.command[0] = SET_HEIGHT_POSITION_MM;
-	board2.command[1] = (unsigned char)(height_mm >> 8);
-	board2.command[2] = (unsigned char)(height_mm & 0xFF);
-	if (!board2.communicate(3,4)) {
-		printError("Cannot decrement height");
-		return false;
-	}
-	return true;
-	*/
-	int vref = -100;
-	board2.command[0] = 0x36;
-	board2.command[1] = (unsigned char)(vref<<8);
-	board2.command[2] = (unsigned char)(vref&0xff);
-	board2.communicate(3,4);
-	return true;
-	//return setHeight(MIN_HEIGHT_MM);
-}
-
-inline
-bool IdMindRobot::incTilt()
-{
-	board2.command[0] = GET_TILT_ACTUAL_POSITION;
-	if (!board2.communicate(1,8)) {
-		printError("Cannot get tilt angle");
-		return false;
-	}
-	int16_t tilt_degrees = bufferToInt(board2.response+1);
-	if (tilt_degrees==MAX_TILT_ANGLE_DEGREES) {
-		return true;
-	}
-	tilt_degrees = std::min(MAX_TILT_ANGLE_DEGREES,tilt_degrees+2);
-	board2.command[0] = SET_TILT_POSITION_DEGREES;
-	board2.command[1] = (unsigned char)(tilt_degrees >> 8);
-	board2.command[2] = (unsigned char)(tilt_degrees & 0xFF);
-	if (!board2.communicate(3,4)) {
-		printError("Cannot increment tilt angle");
-		return false;
-	}
-	return true;
-}
-
-inline
-bool IdMindRobot::decTilt()
-{
-	board2.command[0] = GET_TILT_ACTUAL_POSITION;
-	if (!board2.communicate(1,8)) {
-		printError("Cannot get tilt angle");
-		return false;
-	}
-	int16_t tilt_degrees = bufferToInt(board2.response+1);
-	if (tilt_degrees==MIN_TILT_ANGLE_DEGREES) {
-		return true;
-	}
-	tilt_degrees = std::max(MIN_TILT_ANGLE_DEGREES,tilt_degrees-2);
-	board2.command[0] = SET_TILT_POSITION_DEGREES;
-	board2.command[1] = (unsigned char)(tilt_degrees >> 8);
-	board2.command[2] = (unsigned char)(tilt_degrees & 0xFF);
-	if (!board2.communicate(3,4)) {
-		printError("Cannot decrement tilt angle");
-		return false;
-	}
-	return true;
-}
-
-inline
-bool IdMindRobot::setHeight(double height)
-{
-	int16_t height_ref = (int16_t)std::round(height);
+	int16_t height_ref = (int16_t)height;
 	if (height_ref<MIN_HEIGHT_MM) {
 		height_ref=MIN_HEIGHT_MM;
 	} else if (height_ref>MAX_HEIGHT_MM) {
@@ -603,9 +534,9 @@ bool IdMindRobot::setHeight(double height)
 }
 
 inline
-bool IdMindRobot::setTilt(double tilt)
+bool IdMindRobot::setTilt(int tilt)
 {
-	int16_t tilt_ref = (int16_t)std::round(tilt * 57.2958);
+	int16_t tilt_ref = (int16_t)tilt;
 	if (tilt_ref<MIN_TILT_ANGLE_DEGREES) {
 		tilt_ref=MIN_TILT_ANGLE_DEGREES;
 	} else if (tilt_ref>MAX_TILT_ANGLE_DEGREES) {
@@ -622,26 +553,26 @@ bool IdMindRobot::setTilt(double tilt)
 }
 
 inline
-bool IdMindRobot::getHeight(double& height)
+bool IdMindRobot::getHeight(int& height)
 {
 	board2.command[0] = GET_HEIGHT_ACTUAL_POSITION;
 	if (!board2.communicate(1,8)) {
 		printError("Cannot get height");
 		return false;
 	}
-	height = (double)bufferToInt(board2.response+1);
+	height = bufferToInt(board2.response+1);
 	return true;
 }
 
 inline
-bool IdMindRobot::getTilt(double& tilt)
+bool IdMindRobot::getTilt(int& tilt)
 {
 	board2.command[0] = GET_TILT_ACTUAL_POSITION;
 	if (!board2.communicate(1,8)) {
 		printError("Cannot set tilt angle");
 		return false;
 	}
-	tilt = (double)bufferToInt(board2.response+1) * 0.0174533;
+	tilt = bufferToInt(board2.response+1);
 	return true;
 }
 

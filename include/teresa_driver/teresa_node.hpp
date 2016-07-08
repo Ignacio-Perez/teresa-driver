@@ -49,6 +49,8 @@
 namespace Teresa
 {
 
+enum MotorStatus {MOTOR_UP, MOTOR_DOWN, MOTOR_STOP};
+
 class Node
 {
 public:
@@ -73,10 +75,6 @@ private:
 	ros::NodeHandle& n;
 	double ang_vel;
 	bool imu_error;
-	bool head_up;
-	bool head_down;
-	bool tilt_up;
-	bool tilt_down;
 	double yaw;
 	bool imu_first_time;
 	int using_imu;
@@ -84,6 +82,8 @@ private:
 	int publish_buttons;
 	int publish_volume;
 	int publish_power_diagnostics;
+	int height_velocity;
+	int tilt_velocity;
 	double freq;
 	std::string base_frame_id;
 	std::string odom_frame_id;
@@ -105,20 +105,20 @@ private:
 	ros::Time imu_past_time;
 	ros::Time cmd_vel_time;
 	Robot *teresa;
+	MotorStatus tiltMotor;
+	MotorStatus heightMotor;
 };
 
 inline
 Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 : n(n), 
   ang_vel(0.0),
-  imu_error(false), 
-  head_up(false),
-  head_down(false),
-  tilt_up(false),
-  tilt_down(false),
+  imu_error(false),
   yaw(0.0),
   imu_first_time(true),
-  teresa(NULL)
+  teresa(NULL),
+  tiltMotor(MOTOR_STOP),
+  heightMotor(MOTOR_STOP)
 {
 	try
 	{
@@ -131,17 +131,19 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<std::string>("base_frame_id", base_frame_id, "/base_link");
 		pn.param<std::string>("odom_frame_id", odom_frame_id, "/odom");
 		pn.param<std::string>("head_frame_id", head_frame_id, "/teresa_head");	
-    	pn.param<std::string>("stalk_frame_id", stalk_frame_id, "/teresa_stalk");
+	    	pn.param<std::string>("stalk_frame_id", stalk_frame_id, "/teresa_stalk");
 		pn.param<int>("simulation",simulation,0);	
 		pn.param<int>("using_imu", using_imu, 1);
 		pn.param<int>("publish_temperature", publish_temperature, 1);
 		pn.param<int>("publish_buttons", publish_buttons, 1);
 		pn.param<int>("publish_volume", publish_volume, 1);
 		pn.param<int>("publish_power_diagnostics",publish_power_diagnostics,1);
-	    pn.param<int>("number_of_leds",number_of_leds,38);
+		pn.param<int>("number_of_leds",number_of_leds,38);
 		pn.param<int>("initial_dcdc_mask",initial_dcdc_mask,0xFF);
-	    pn.param<int>("final_dcdc_mask",final_dcdc_mask,0x00);
-		pn.param<double>("freq",freq,50);
+		pn.param<int>("final_dcdc_mask",final_dcdc_mask,0x00);
+		pn.param<double>("freq",freq,20);
+		pn.param<int>("height_velocity",height_velocity,20);
+		pn.param<int>("tilt_velocity",tilt_velocity,2);
 		if (simulation) {
 			using_imu=0;
 			teresa = new SimulatedRobot();
@@ -206,40 +208,46 @@ void Node::imuReceived(const sensor_msgs::Imu::ConstPtr& imu)
 inline
 void Node::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
 {
-	if (stalk->head_up) {
-		head_up=true;
-		head_down=false;
+	if (stalk->head_up && heightMotor!=MOTOR_UP) {
+		teresa->setHeightVelocity(height_velocity);
+		teresa->setHeight(MAX_HEIGHT_MM);
+		heightMotor = MOTOR_UP;
 	}
 	else
-	if (stalk->head_down) {
-		head_up=false;
-		head_down=true;
+	if (stalk->head_down && heightMotor!=MOTOR_DOWN) {
+		teresa->setHeightVelocity(height_velocity);
+		teresa->setHeight(MIN_HEIGHT_MM);
+		heightMotor = MOTOR_DOWN;
 	}
-	else {
-		head_up=false;
-		head_down=false;
+	else if (heightMotor!=MOTOR_STOP){
+		teresa->setHeightVelocity(0);
+		heightMotor = MOTOR_STOP;
 	}
 	
-	if (stalk->tilt_up) {
-		tilt_up=true;
-		tilt_down=false;
+	if (stalk->tilt_up && tiltMotor!=MOTOR_UP) {
+		teresa->setTiltVelocity(tilt_velocity);
+		teresa->setTilt(MAX_TILT_ANGLE_DEGREES);
+		tiltMotor = MOTOR_UP;
 	}
 	else
-	if (stalk->tilt_down) {
-		tilt_up=false;
-		tilt_down=true;
+	if (stalk->tilt_down && tiltMotor!=MOTOR_DOWN) {
+		teresa->setTiltVelocity(tilt_velocity);
+		teresa->setTilt(MIN_TILT_ANGLE_DEGREES);
+		tiltMotor = MOTOR_DOWN;
 	}
-	else {
-		tilt_up=false;
-		tilt_down=false;
+	else if (tiltMotor!=MOTOR_STOP){
+		teresa->setTiltVelocity(0);
+		tiltMotor = MOTOR_STOP;
 	}
 }
 
 inline
 void Node::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
 {
-	teresa->setHeight(stalk_ref->head_height*1000);
-        teresa->setTilt(stalk_ref->head_tilt);
+	teresa->setHeightVelocity(height_velocity);
+	teresa->setTiltVelocity(tilt_velocity);
+	teresa->setHeight((int)std::round(stalk_ref->head_height*1000));
+        teresa->setTilt((int)std::round(stalk_ref->head_tilt * 57.2958));
 }
 
 inline
@@ -284,8 +292,10 @@ void Node::loop()
 	double imdl,imdr;
 	double dt;
 	bool first_time=true;
-	double height_in_meters;
-	double tilt_in_radians;
+	double height_in_meters=0;
+	int height_in_millimeters=0;
+	double tilt_in_radians=0;
+	int tilt_in_degrees=0;
 	bool button1=false,button2=false;
 	bool button1_tmp,button2_tmp;
 	int rotaryEncoder;
@@ -329,16 +339,7 @@ void Node::loop()
 			pos_y += imd*std::sin(yaw + ang_vel*dt/2);
 		} 
 		
-		if (head_up) {
-			teresa->incHeight();
-		} else if (head_down) {
-			teresa->decHeight();
-		}
-		if (tilt_up) {
-			teresa->incTilt();
-		} else if (tilt_down) {
-			teresa->decTilt();
-		}
+		
 		// ******************************************************************************************
 		//first, we'll publish the transforms over tf
 		geometry_msgs::TransformStamped odom_trans;
@@ -350,11 +351,13 @@ void Node::loop()
 		odom_trans.transform.translation.z = 0.0;
 		odom_trans.transform.rotation = tf::createQuaternionMsgFromRollPitchYaw(0.0, 0.0, yaw);
 		tf_broadcaster.sendTransform(odom_trans);
-		if (teresa->getHeight(height_in_meters)) {
-			height_in_meters*=0.001;
+		if (teresa->getHeight(height_in_millimeters)) {
+			height_in_meters= (double)height_in_millimeters * 0.001;
 		}
 		
-        	teresa->getTilt(tilt_in_radians);
+        	if (teresa->getTilt(tilt_in_degrees)) {
+			tilt_in_radians = tilt_in_degrees * 0.0174533;
+		}
 
 		geometry_msgs::TransformStamped stalk_trans;
 		stalk_trans.header.stamp = current_time;

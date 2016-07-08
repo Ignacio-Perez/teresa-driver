@@ -31,14 +31,11 @@
 namespace Teresa
 {
 
-#define MIN_HEIGHT_MM                         1210
+#define MIN_HEIGHT_MM                         1260
 #define MAX_HEIGHT_MM                         1425
 
 #define MIN_TILT_ANGLE_DEGREES                 -37
-#define MAX_TILT_ANGLE_DEGREES                 180
-
-#define MIN_TILT_ANGLE_RADIANS           -0.645772 
-#define MAX_TILT_ANGLE_RADIANS                M_PI
+#define MAX_TILT_ANGLE_DEGREES                  37  
 
 #define ROBOT_DIAMETER_M                      0.47
 #define ROBOT_RADIUS_M                       0.235
@@ -98,53 +95,47 @@ public:
 	 */ 
 	virtual bool getIMD(double& imdl, double& imdr) = 0;
 	/**
-	 * Increment the height by 10mm
-         * @return true if success, false otherwise
+	 * Set the height velocity in mm/s 
+	 *
+	 * @param[in] velocity in mm/s
+	 * @return true if success, false otherwise
 	 */
-	virtual bool incHeight() = 0;
+	virtual bool setHeightVelocity(int velocity) = 0;
 	/**
-	 * Decrement the height by 10mm
-         * @return true if success, false otherwise
+	 * Set the tilt velocity in degrees/s 
+	 *
+	 * @param[in] velocity in degrees/s
+	 * @return true if success, false otherwise
 	 */
-	virtual bool decHeight() = 0;
-	/**
-	 * Increment the tilt angle by 2 degrees
-         * @return true if success, false otherwise
-	 */
-	virtual bool incTilt() = 0;
-	/**
-	 * Decrement the tilt angle by 2 degrees
-         * @return true if success, false otherwise
-	 */
-	virtual bool decTilt() = 0;
+	virtual bool setTiltVelocity(int velocity) = 0;
 	/**
 	 * Set the height
 	 *
-	 * @param[in] height the height in millimeters
+	 * @param[in] height in millimeters [1210 to 1425]
          * @return true if success, false otherwise
 	 */
-	virtual bool setHeight(double height) = 0;
+	virtual bool setHeight(int height) = 0;
 	/**
 	 * Set the tilt angle
 	 *
-	 * @param[in] tilt the tilt angle in radians
+	 * @param[in] tilt angle in degrees [-37 to 180]
          * @return true if success, false otherwise
 	 */
-	virtual bool setTilt(double tilt) = 0;
+	virtual bool setTilt(int tilt) = 0;
 	/**
 	 * Get the height
 	 *
-	 * height[out] the height in millimeters
+	 * height[out] the height in millimeters 
 	 * @return true if success, false otherwise
 	 */
-	virtual bool getHeight(double& height) = 0;
+	virtual bool getHeight(int& height) = 0;
 	/**
 	 * Get the tilt angle
 	 *
-	 * tilt[out] the tilt angle in radians
+	 * @param[out] tilt angle in degrees
 	 * @return true if success, false otherwise
 	 */
-	virtual bool getTilt(double& tilt) = 0;
+	virtual bool getTilt(int& tilt) = 0;
 	/**
 	 * Check if some button has been pressed
 	 *

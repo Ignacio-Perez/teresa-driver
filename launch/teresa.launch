@@ -26,7 +26,9 @@
    <param name="publish_power_diagnostics" type="int" value="1"/>
    <param name="number_of_leds" type="int" value="38"/>
    <param name="initial_dcdc_mask" type="int" value="243"/>
-   <param name="final_dcdc_mask" type="int" value="243"/>	
+   <param name="final_dcdc_mask" type="int" value="243"/>
+   <param name="height_velocity" type="int" value="20"/>
+   <param name="tilt_velocity" type="int" value="2"/>	
    </node>
 
    <!-- joy node -->

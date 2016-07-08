@@ -43,14 +43,12 @@ public:
 	virtual bool setVelocity(double linear, double angular);
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
-	virtual bool incHeight();
-	virtual bool decHeight();
-	virtual bool incTilt();
-	virtual bool decTilt();
-	virtual bool setHeight(double height);
-	virtual bool setTilt(double tilt);
-	virtual bool getHeight(double& height) {height = SimulatedRobot::height; return true;}
-	virtual bool getTilt(double& tilt) {tilt = SimulatedRobot::tilt; return true;}
+	virtual bool setHeightVelocity(int velocity) {return true;}
+	virtual bool setTiltVelocity(int velocity) {return true;}
+	virtual bool setHeight(int height);
+	virtual bool setTilt(int tilt);
+	virtual bool getHeight(int& height) {height = SimulatedRobot::height; return true;}
+	virtual bool getTilt(int& tilt) {tilt = SimulatedRobot::tilt; return true;}
 	virtual bool getTemperature(int& leftMotor, 
 			int& rightMotor, 
 			int& leftDriver, 
@@ -116,8 +114,8 @@ public:
 private:
 	double left_wheel_velocity;
 	double right_wheel_velocity;
-	double height;
-        double tilt;
+	int height;
+        int tilt;
 	double left_meters;
 	double right_meters;
 	double current_left_meters;
@@ -179,47 +177,7 @@ bool SimulatedRobot::getIMD(double& imdl, double& imdr)
 }
 
 inline
-bool SimulatedRobot::incHeight()
-{
-	height+=10;
-	if (height>MAX_HEIGHT_MM) {
-		height=MAX_HEIGHT_MM;
-	}
-	return true;
-}
-
-inline
-bool SimulatedRobot::decHeight()
-{
-	height-=10;
-	if (height<MIN_HEIGHT_MM) {
-		height=MIN_HEIGHT_MM;
-	}
-	return true;
-}
-
-inline
-bool SimulatedRobot::incTilt()
-{
-	tilt+=0.0349066;
-	if (tilt>MAX_TILT_ANGLE_RADIANS) {
-		tilt = MAX_TILT_ANGLE_RADIANS;
-	}
-	return true;
-}
-
-inline
-bool SimulatedRobot::decTilt()
-{
-	tilt-=0.0349066;
-	if (tilt<MIN_TILT_ANGLE_RADIANS) {
-		tilt=MIN_TILT_ANGLE_RADIANS;
-	}
-	return true;
-}
-
-inline
-bool SimulatedRobot::setHeight(double height)
+bool SimulatedRobot::setHeight(int height)
 {
 	if (height<MIN_HEIGHT_MM) {
 		height=MIN_HEIGHT_MM;
@@ -231,12 +189,12 @@ bool SimulatedRobot::setHeight(double height)
 }
 
 inline
-bool SimulatedRobot::setTilt(double tilt)
+bool SimulatedRobot::setTilt(int tilt)
 {
-	if (tilt < MIN_TILT_ANGLE_RADIANS) {
-		tilt=MIN_TILT_ANGLE_RADIANS;
-	} else if (tilt>MAX_TILT_ANGLE_RADIANS) {
-		tilt=MAX_TILT_ANGLE_RADIANS;
+	if (tilt < MIN_TILT_ANGLE_DEGREES) {
+		tilt=MIN_TILT_ANGLE_DEGREES;
+	} else if (tilt>MAX_TILT_ANGLE_DEGREES) {
+		tilt=MAX_TILT_ANGLE_DEGREES;
 	}
 	SimulatedRobot::tilt = tilt;
 	return true;
