@@ -98,18 +98,18 @@ public:
 		return true;
 	}
 	virtual bool setLeds(const std::vector<unsigned char>& leds){std::cout<<"Set Leds"<<std::endl;return true;}
-	virtual bool getPowerDiagnosis(PowerDiagnosis& diagnosis)
+	virtual bool getPowerDiagnostics(PowerDiagnostics& diagnostics)
 	{
-		diagnosis.elec_bat_voltage = 0;
-		diagnosis.PC1_bat_voltage = 0;
-		diagnosis.cable_bat_voltage = 0;
-		diagnosis.motor_voltage = 0;
-		diagnosis.motor_h_voltage = 0;
-		diagnosis.motor_l_voltage = 0;
-		diagnosis.elec_instant_current = 0;
-		diagnosis.motor_instant_current = 0;
-		diagnosis.elec_integrated_current = 0;
-		diagnosis.motor_integrated_current = 0; 
+		diagnostics.elec_bat_voltage = 0;
+		diagnostics.PC1_bat_voltage = 0;
+		diagnostics.cable_bat_voltage = 0;
+		diagnostics.motor_voltage = 0;
+		diagnostics.motor_h_voltage = 0;
+		diagnostics.motor_l_voltage = 0;
+		diagnostics.elec_instant_current = 0;
+		diagnostics.motor_instant_current = 0;
+		diagnostics.elec_integrated_current = 0;
+		diagnostics.motor_integrated_current = 0; 
 		return true;
 	}	
 

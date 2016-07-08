@@ -51,7 +51,7 @@ namespace Teresa
 
 
 
-struct PowerDiagnosis
+struct PowerDiagnostics
 {
 	double elec_bat_voltage;     // V
 	double PC1_bat_voltage;      // V
@@ -235,12 +235,12 @@ public:
 
 
 	/**
-	 * get Power diagnosis
+	 * get Power diagnostics
 	 *
-	 * @param[out] diagnosis struct of PowerDiagnosis with information
+	 * @param[out] diagnostics struct of PowerDiagnostics with information
 	 * @return true if success, false otherwise
 	 */
-	virtual bool getPowerDiagnosis(PowerDiagnosis& diagnosis) = 0;
+	virtual bool getPowerDiagnostics(PowerDiagnostics& diagnostics) = 0;
 protected:
 	/**
 	 * Saturate a linear velocity value
@@ -289,7 +289,7 @@ double Robot::saturateAngularVelocity(double v)
 inline
 double Robot::saturate(double v, double max_value, double zero_threshold)
 {
-	if (std::abs(v)<=zero_threshold) {
+	if (v<=zero_threshold && v>=-zero_threshold) {
 		v = 0.0;
 	}
 	else if (v>max_value) {

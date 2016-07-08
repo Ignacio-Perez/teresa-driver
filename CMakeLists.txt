@@ -24,7 +24,7 @@ add_message_files(
   Volume.msg
   Buttons.msg
   Temperature.msg
-  Diagnosis.msg
+  Diagnostics.msg
 )
 
 add_service_files(

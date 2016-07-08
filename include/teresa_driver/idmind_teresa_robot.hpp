@@ -36,7 +36,6 @@ namespace Teresa
 {
 
 #define WRITTING_TRIES                  5
-#define READING_TRIES                   5
 
 // BOARD1 COMMANDS
 #define SET_NUMBER_RGB_LEDS          0x35
@@ -97,13 +96,14 @@ class IdMindRobot : public Robot
 public:
 	IdMindRobot(const std::string& board1,
 			const std::string& board2,
-                        unsigned char dcdc_mask,
+                        unsigned char initial_dcdc_mask,
+			unsigned char final_dcdc_mask,
 			unsigned char number_of_leds,
 			void (*printInfo)(const std::string& message) = defaultPrint,
 			void (*printError)(const std::string& message) = defaultPrint);
 			
  
-	virtual ~IdMindRobot() {}
+	virtual ~IdMindRobot();
 	virtual bool setVelocity(double linear, double angular);
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
@@ -130,9 +130,10 @@ public:
 					unsigned char& motorH_level, 
 					unsigned char& motorL_level, 
 					unsigned char& charger_status);
-	virtual bool getPowerDiagnosis(PowerDiagnosis& diagnosis);
+	virtual bool getPowerDiagnostics(PowerDiagnostics& diagnostics);
 private:
-	static int bufferToInt(const unsigned char* buffer);
+	static int16_t bufferToInt(const unsigned char* buffer);
+	static uint16_t bufferToUnsignedInt(const unsigned char* buffer);
 
 	bool setFans(bool fans);
 	bool enableTiltMotor(bool enable);
@@ -149,6 +150,7 @@ private:
 	void (*printError)(const std::string& message);
 
 	bool is_stopped;
+	int final_dcdc_mask;
 
 };
 
@@ -190,10 +192,10 @@ bool IdMindBoard::open()
 inline
 bool IdMindBoard::checksum(int response_size)
 {
-	int checksum1 = (int)response[response_size-2];
-	checksum1 = checksum1 << 8; 
-	checksum1 = checksum1 + (int)response[response_size-1];
-	int checksum2=0;
+	uint16_t checksum1 = (int)response[response_size-2];
+	checksum1 <<= 8; 
+	checksum1 += (int)response[response_size-1];
+	uint16_t checksum2=0;
 	for(int i=0; i<response_size-2; i++)	{
 		checksum2 += (int)response[i];
    	}
@@ -233,9 +235,9 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 		counter = response[response_size-3]; 
 	} else {
 		counter++;
-	}
-	if (counter==256) {
-		counter=0;
+		if (counter==256) {
+			counter=0;
+		}
 	}
 	if (counter != response[response_size-3]) {
 		printError("Invalid response counter from "+name);
@@ -249,7 +251,8 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 
 inline
 IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
-				unsigned char dcdc_mask,
+				unsigned char initial_dcdc_mask,
+				unsigned char final_dcdc_mask,
 				unsigned char number_of_leds,
 				void (*printInfo)(const std::string& message),
 				void (*printError)(const std::string& message))
@@ -258,14 +261,15 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
   number_of_leds(number_of_leds),
   printInfo(printInfo),
   printError(printError),
-  is_stopped(true)
+  is_stopped(true),
+  final_dcdc_mask(final_dcdc_mask)
 {
 	bool board1_open = IdMindRobot::board1.open();
 	bool board2_open = IdMindRobot::board2.open();
 	
 	if (!board1_open || 
 		!board2_open || 
-		!enableDCDC(dcdc_mask) ||
+		!enableDCDC(initial_dcdc_mask) ||
 		!setFans(true) ||
 		!setNumberOfLeds(number_of_leds)) {
 		throw ("Teresa initialization aborted");
@@ -273,15 +277,31 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
 
 }
 
+inline
+IdMindRobot::~IdMindRobot()
+{
+	enableDCDC(final_dcdc_mask);
+}
+
 
 inline
-int IdMindRobot::bufferToInt(const unsigned char* buffer)
+int16_t IdMindRobot::bufferToInt(const unsigned char* buffer)
 {
-	int value = buffer[0];
+	int16_t value = (int16_t)buffer[0];
 	value <<= 8;
-	value += buffer[1];
+	value |= (int16_t)buffer[1];
 	return value;
 }
+
+inline
+uint16_t IdMindRobot::bufferToUnsignedInt(const unsigned char* buffer)
+{
+	uint16_t value = (uint16_t)buffer[0];
+	value <<= 8;
+	value |= (uint16_t)buffer[1];
+	return value;
+}
+
 
 inline
 bool IdMindRobot::setFans(bool fans)
@@ -369,13 +389,13 @@ bool IdMindRobot::setVelocity(double linear, double angular)
 	angular=saturateAngularVelocity(angular);
 	double left_wheel_velocity = saturateLinearVelocity(linear - ROBOT_RADIUS_M*angular);
 	double right_wheel_velocity = saturateLinearVelocity(linear + ROBOT_RADIUS_M*angular);
-	int v_left=0;
-	int v_right=0;
-	if (std::abs(left_wheel_velocity) > LINEAR_VELOCITY_ZERO_THRESHOLD) {
-		v_left = (int)std::round(left_wheel_velocity * 210.0 + 8.35);
+	int16_t v_left=0;
+	int16_t v_right=0;
+	if (left_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || left_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
+		v_left = -(int16_t)std::round(left_wheel_velocity * 210.0 + 8.35);
 	}
-	if (std::abs(right_wheel_velocity) > LINEAR_VELOCITY_ZERO_THRESHOLD) {
-		v_right = (int)std::round(right_wheel_velocity * 210.0 + 8.35);
+	if (right_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || right_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
+		v_right = (int16_t)std::round(right_wheel_velocity * 210.0 + 8.35);
 	}
 	board2.command[0] = SET_MOTOR_VELOCITY;
 	board2.command[1] = (unsigned char)(v_left >> 8);
@@ -403,8 +423,8 @@ bool IdMindRobot::getIMD(double& imdl, double& imdr)
 		printError("Cannot get motor velocity ticks");
 		return false;
 	}
-	int inc_left = bufferToInt(board2.response+1);
-	int inc_right = bufferToInt(board2.response+3);
+	int16_t inc_left = bufferToInt(board2.response+1);
+	int16_t inc_right = bufferToInt(board2.response+3);
 	imdl = inc_left==0?0:(double)inc_left*0.00024802;
 	imdr = inc_right==0?0:(double)inc_right*0.00024802;
 	is_stopped = inc_left==0 && inc_right==0;
@@ -419,7 +439,7 @@ bool IdMindRobot::incHeight()
 		printError("Cannot get height position");
 		return false;
 	}
-	int height_mm = bufferToInt(board2.response+1);
+	int16_t height_mm = bufferToInt(board2.response+1);
 	if (height_mm==MAX_HEIGHT_MM) {
 		return true;
 	}
@@ -443,7 +463,7 @@ bool IdMindRobot::decHeight()
 		printError("Cannot get height position");
 		return false;
 	}
-	int height_mm = bufferToInt(board2.response+1);
+	int16_t height_mm = bufferToInt(board2.response+1);
 	if (height_mm==MIN_HEIGHT_MM) {
 		return true;
 	}
@@ -466,7 +486,7 @@ bool IdMindRobot::incTilt()
 		printError("Cannot get tilt angle");
 		return false;
 	}
-	int tilt_degrees = bufferToInt(board2.response+1);
+	int16_t tilt_degrees = bufferToInt(board2.response+1);
 	if (tilt_degrees==MAX_TILT_ANGLE_DEGREES) {
 		return true;
 	}
@@ -489,7 +509,7 @@ bool IdMindRobot::decTilt()
 		printError("Cannot get tilt angle");
 		return false;
 	}
-	int tilt_degrees = bufferToInt(board2.response+1);
+	int16_t tilt_degrees = bufferToInt(board2.response+1);
 	if (tilt_degrees==MIN_TILT_ANGLE_DEGREES) {
 		return true;
 	}
@@ -507,7 +527,7 @@ bool IdMindRobot::decTilt()
 inline
 bool IdMindRobot::setHeight(double height)
 {
-	int height_ref = (int)std::round(height);
+	int16_t height_ref = (int16_t)std::round(height);
 	if (height_ref<MIN_HEIGHT_MM) {
 		height_ref=MIN_HEIGHT_MM;
 	} else if (height_ref>MAX_HEIGHT_MM) {
@@ -527,7 +547,7 @@ bool IdMindRobot::setHeight(double height)
 inline
 bool IdMindRobot::setTilt(double tilt)
 {
-	int tilt_ref = (int)std::round(tilt * 57.2958);
+	int16_t tilt_ref = (int16_t)std::round(tilt * 57.2958);
 	if (tilt_ref<MIN_TILT_ANGLE_DEGREES) {
 		tilt_ref=MIN_TILT_ANGLE_DEGREES;
 	} else if (tilt_ref>MAX_TILT_ANGLE_DEGREES) {
@@ -588,7 +608,7 @@ bool IdMindRobot::getRotaryEncoder(int& rotaryEncoder)
 		printError("Cannot get rotary encoder");
 		return false;
 	}
-	rotaryEncoder = (int)board2.response[1];
+	rotaryEncoder = (int8_t)board2.response[1];
 	return true;
 }
 
@@ -605,10 +625,10 @@ bool IdMindRobot::getTemperature(int& leftMotor,
 		printError("Cannot get temperature sensors");
 		return false;
 	}
-	leftMotor = board2.response[1];
-	rightMotor = board2.response[2];
-	leftDriver = board2.response[3];
-	rightDriver = board2.response[4];
+	leftMotor = (int8_t)board2.response[1];
+	rightMotor = (int8_t)board2.response[2];
+	leftDriver = (int8_t)board2.response[3];
+	rightDriver = (int8_t)board2.response[4];
 		
 	board2.command[0] = GET_TILT_STATUS;
 	if (!board2.communicate(1,5)) {
@@ -685,7 +705,7 @@ bool IdMindRobot::getBatteryStatus(unsigned char& elec_level,
 }
 
 inline
-bool IdMindRobot::getPowerDiagnosis(PowerDiagnosis& diagnosis)
+bool IdMindRobot::getPowerDiagnostics(PowerDiagnostics& diagnostics)
 {
 	board1.command[0]=GET_POWER_VOLTAGE;
 	if (!board1.communicate(1,11)) {
@@ -693,22 +713,22 @@ bool IdMindRobot::getPowerDiagnosis(PowerDiagnosis& diagnosis)
 		return false;
 	}
 
-	diagnosis.elec_bat_voltage = (double)board1.response[1]/10.0;
-	diagnosis.PC1_bat_voltage = (double)board1.response[2]/10.0;
-	diagnosis.cable_bat_voltage = (double)board1.response[3]/10.0;
-	diagnosis.motor_voltage = (double)bufferToInt(board1.response+4)/10.0;
-	diagnosis.motor_h_voltage = (double)board1.response[6]/10.0;
-	diagnosis.motor_l_voltage = (double)board1.response[7]/10.0;
+	diagnostics.elec_bat_voltage = (double)(int8_t)board1.response[1]/10.0;
+	diagnostics.PC1_bat_voltage = (double)(int8_t)board1.response[2]/10.0;
+	diagnostics.cable_bat_voltage = (double)(int8_t)board1.response[3]/10.0;
+	diagnostics.motor_voltage = (double)bufferToInt(board1.response+4)/10.0;
+	diagnostics.motor_h_voltage = (double)(int8_t)board1.response[6]/10.0;
+	diagnostics.motor_l_voltage = (double)(int8_t)board1.response[7]/10.0;
 
 	board1.command[0]=GET_POWER_CURRENT;
 	if (!board1.communicate(1,12)) {
 		printError("Cannot get power current information");
 		return false;
 	}
-	diagnosis.elec_instant_current = bufferToInt(board1.response+1);
-	diagnosis.motor_instant_current = bufferToInt(board1.response+3);
-	diagnosis.elec_integrated_current = bufferToInt(board1.response+5);
-	diagnosis.motor_integrated_current = bufferToInt(board1.response+7);
+	diagnostics.elec_instant_current = bufferToInt(board1.response+1);
+	diagnostics.motor_instant_current = bufferToInt(board1.response+3);
+	diagnostics.elec_integrated_current = bufferToInt(board1.response+5);
+	diagnostics.motor_integrated_current = bufferToInt(board1.response+7);
 	return true;
 }	
 

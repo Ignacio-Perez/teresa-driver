@@ -40,7 +40,7 @@
 #include <teresa_driver/Batteries.h>
 #include <teresa_driver/Teresa_DCDC.h>
 #include <teresa_driver/Teresa_leds.h>
-#include <teresa_driver/Diagnosis.h>
+#include <teresa_driver/Diagnostics.h>
 #include <teresa_driver/simulated_teresa_robot.hpp>
 #include <teresa_driver/idmind_teresa_robot.hpp>
 
@@ -83,7 +83,7 @@ private:
 	int publish_temperature;
 	int publish_buttons;
 	int publish_volume;
-	int publish_power_diagnosis;
+	int publish_power_diagnostics;
 	double freq;
 	std::string base_frame_id;
 	std::string odom_frame_id;
@@ -97,7 +97,7 @@ private:
 	ros::Publisher buttons_pub;
 	ros::Publisher batteries_pub;
 	ros::Publisher volume_pub;
-	ros::Publisher diagnosis_pub;
+	ros::Publisher diagnostics_pub;
 	ros::Publisher temperature_pub;	
 	ros::ServiceServer dcdc_service;
 	ros::ServiceServer leds_service;
@@ -125,27 +125,28 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		int simulation;
 		std::string board1;
 		std::string board2;
-		int initial_dcdc_mask,number_of_leds;
+		int initial_dcdc_mask,final_dcdc_mask,number_of_leds;
 		pn.param<std::string>("board1",board1,"/dev/ttyUSB0");
 		pn.param<std::string>("board2",board2,"/dev/ttyUSB1");
 		pn.param<std::string>("base_frame_id", base_frame_id, "/base_link");
 		pn.param<std::string>("odom_frame_id", odom_frame_id, "/odom");
 		pn.param<std::string>("head_frame_id", head_frame_id, "/teresa_head");	
-    		pn.param<std::string>("stalk_frame_id", stalk_frame_id, "/teresa_stalk");
+    	pn.param<std::string>("stalk_frame_id", stalk_frame_id, "/teresa_stalk");
 		pn.param<int>("simulation",simulation,0);	
 		pn.param<int>("using_imu", using_imu, 1);
 		pn.param<int>("publish_temperature", publish_temperature, 1);
 		pn.param<int>("publish_buttons", publish_buttons, 1);
 		pn.param<int>("publish_volume", publish_volume, 1);
-		pn.param<int>("publish_power_diagnosis",publish_power_diagnosis,1);
-	        pn.param<int>("number_of_leds",number_of_leds,38);
+		pn.param<int>("publish_power_diagnostics",publish_power_diagnostics,1);
+	    pn.param<int>("number_of_leds",number_of_leds,38);
 		pn.param<int>("initial_dcdc_mask",initial_dcdc_mask,0xFF);
+	    pn.param<int>("final_dcdc_mask",final_dcdc_mask,0x00);
 		pn.param<double>("freq",freq,50);
 		if (simulation) {
 			using_imu=0;
 			teresa = new SimulatedRobot();
 		} else {
-			teresa = new IdMindRobot(board1,board2,initial_dcdc_mask,number_of_leds,printInfo,printError);
+			teresa = new IdMindRobot(board1,board2,initial_dcdc_mask,final_dcdc_mask,number_of_leds,printInfo,printError);
 		}
 		odom_pub = pn.advertise<nav_msgs::Odometry>(odom_frame_id, 5);
 		cmd_vel_sub = n.subscribe<geometry_msgs::Twist>("/cmd_vel",1,&Node::cmdVelReceived,this);
@@ -163,8 +164,8 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		if (publish_temperature) {
 			temperature_pub = pn.advertise<teresa_driver::Temperature>("/temperatures",5);
 		}
-		if (publish_power_diagnosis) {
-			diagnosis_pub = pn.advertise<teresa_driver::Diagnosis>("/teresa_diagnosis",5);
+		if (publish_power_diagnostics) {
+			diagnostics_pub = pn.advertise<teresa_driver::Diagnostics>("/teresa_diagnostics",5);
 		}
 		batteries_pub = pn.advertise<teresa_driver::Batteries>("/batteries",5);	
 		dcdc_service = n.advertiseService("teresa_dcdc", &Node::teresaDCDC,this);		
@@ -290,7 +291,7 @@ void Node::loop()
 	unsigned char elec_level, PC1_level, motorH_level, motorL_level, charger_status;
 	int temperature_left_motor,temperature_right_motor,temperature_left_driver,temperature_right_driver;
 	bool tilt_overheat,height_overheat;
-	PowerDiagnosis diagnosis;
+	PowerDiagnostics diagnostics;
 	while (n.ok()) {
 		current_time = ros::Time::now();
 		if (using_imu) {		
@@ -440,22 +441,23 @@ void Node::loop()
 			temperature_pub.publish(temperaturemsg);
 		}
 
-		//publish power diagnosis
-		if (publish_power_diagnosis && teresa->getPowerDiagnosis(diagnosis)) {
-			teresa_driver::Diagnosis diagnosismsg;
-			diagnosismsg.header.stamp = current_time;
-			diagnosismsg.elec_bat_voltage = diagnosis.elec_bat_voltage;
-			diagnosismsg.PC1_bat_voltage = diagnosis.PC1_bat_voltage;
-			diagnosismsg.cable_bat_voltage = diagnosis.cable_bat_voltage;
-			diagnosismsg.motor_voltage = diagnosis.motor_voltage;
-			diagnosismsg.motor_h_voltage = diagnosis.motor_h_voltage;
-			diagnosismsg.motor_l_voltage = diagnosis.motor_l_voltage;
-			diagnosismsg.elec_instant_current = diagnosis.elec_instant_current;
-			diagnosismsg.motor_instant_current = diagnosis.motor_instant_current;
-			diagnosismsg.elec_integrated_current = diagnosis.elec_integrated_current;
-			diagnosismsg.motor_integrated_current = diagnosis.motor_integrated_current;
-			diagnosis_pub.publish(diagnosismsg);
+		//publish power diagnostics
+		if (publish_power_diagnostics && teresa->getPowerDiagnostics(diagnostics)) {
+			teresa_driver::Diagnostics diagnosticsmsg;
+			diagnosticsmsg.header.stamp = current_time;
+			diagnosticsmsg.elec_bat_voltage = diagnostics.elec_bat_voltage;
+			diagnosticsmsg.PC1_bat_voltage = diagnostics.PC1_bat_voltage;
+			diagnosticsmsg.cable_bat_voltage = diagnostics.cable_bat_voltage;
+			diagnosticsmsg.motor_voltage = diagnostics.motor_voltage;
+			diagnosticsmsg.motor_h_voltage = diagnostics.motor_h_voltage;
+			diagnosticsmsg.motor_l_voltage = diagnostics.motor_l_voltage;
+			diagnosticsmsg.elec_instant_current = diagnostics.elec_instant_current;
+			diagnosticsmsg.motor_instant_current = diagnostics.motor_instant_current;
+			diagnosticsmsg.elec_integrated_current = diagnostics.elec_integrated_current;
+			diagnosticsmsg.motor_integrated_current = diagnostics.motor_integrated_current;
+			diagnostics_pub.publish(diagnosticsmsg);
 		}
+		
 		r.sleep();	
 		ros::spinOnce();
 	}	
