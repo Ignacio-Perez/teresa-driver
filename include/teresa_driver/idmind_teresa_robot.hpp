@@ -209,14 +209,20 @@ bool IdMindBoard::flush()
 {
 	int bytes;
 	if (!board.incomingBytes(bytes)) {
-		printError("Cannot get incoming bytes, flush aborted");
+		printError("Cannot flush");
 		return false;
 	}
-	if (bytes>0) {
-		board.read(response,bytes);
+	while(bytes>0) {
+		int aux = board.read(response,bytes);
+		if (aux==-1) {
+			printError("Cannot flush, reading error");
+			return false;
+		}
+		bytes-=aux;
 	}
 	return true;
 }
+
 
 inline
 bool IdMindBoard::communicate(int command_size, int response_size)
@@ -231,7 +237,7 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 		printError("Communication with "+name+ " aborted due to maximum writting tries reached");
 		return false;
 	}
-	
+	usleep(1);
 	int read_bytes=0;
 	int bytes;
 	utils::Timer timer;
@@ -245,10 +251,11 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 			if (!counting_timeout) {
 				counting_timeout=true;				
 				timer.init();
-			} else if (timer.elapsed()>0.1) {
+			} else if (timer.elapsed()>0.05) {
 				printError("Communication with "+name+ " aborted due to reading timeout");
 				return false;
 			}
+			usleep(1);
 		} else {
 			counting_timeout=false;
 			bytes = std::min(bytes,response_size-read_bytes);
@@ -306,6 +313,9 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
 		!board2_open || 
 		!enableDCDC(initial_dcdc_mask) ||
 		!setFans(true) ||
+		!enableTiltMotor(true) ||
+		!enableHeightMotor(true) ||
+		!calibrate(true,true) ||
 		!setNumberOfLeds(number_of_leds)) {
 		throw ("Teresa initialization aborted");
 	}
@@ -468,7 +478,7 @@ bool IdMindRobot::getIMD(double& imdl, double& imdr)
 
 inline
 bool IdMindRobot::incHeight()
-{
+{ /*
 	board2.command[0] = GET_HEIGHT_ACTUAL_POSITION;
 	if (!board2.communicate(1,8)) {
 		printError("Cannot get height position");
@@ -487,12 +497,17 @@ bool IdMindRobot::incHeight()
 		return false;
 	}
 	return true;
+	*/
+	
+	
+	return setHeight(MAX_HEIGHT_MM);
 }
 
 
 inline
 bool IdMindRobot::decHeight()
 {
+	/*
 	board2.command[0] = GET_HEIGHT_ACTUAL_POSITION;
 	if (!board2.communicate(1,8)) {
 		printError("Cannot get height position");
@@ -511,6 +526,14 @@ bool IdMindRobot::decHeight()
 		return false;
 	}
 	return true;
+	*/
+	int vref = -100;
+	board2.command[0] = 0x36;
+	board2.command[1] = (unsigned char)(vref<<8);
+	board2.command[2] = (unsigned char)(vref&0xff);
+	board2.communicate(3,4);
+	return true;
+	//return setHeight(MIN_HEIGHT_MM);
 }
 
 inline

@@ -17,7 +17,7 @@
    <param name="odom_frame_id" type="str" value="/odom"/>  
    <param name="head_frame_id" type="str" value="/teresa_head"/>
    <param name="stalk_frame_id" type="str" value="/stalk_head"/>                  
-   <param name="freq" type="double" value="50.0" />               
+   <param name="freq" type="double" value="20.0" />               
    <param name="using_imu" type="int" value="1"/>                   
    <param name="simulation" type="int" value="0"/>
    <param name="publish_temperature" type="int" value="1"/>

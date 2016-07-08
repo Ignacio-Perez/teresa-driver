@@ -293,6 +293,9 @@ void Node::loop()
 	int temperature_left_motor,temperature_right_motor,temperature_left_driver,temperature_right_driver;
 	bool tilt_overheat,height_overheat;
 	PowerDiagnostics diagnostics;
+
+	double loopDurationSum=0;
+	unsigned long loopCounter=0;
 	while (n.ok()) {
 		current_time = ros::Time::now();
 		if (using_imu) {		
@@ -457,11 +460,15 @@ void Node::loop()
 			diagnosticsmsg.motor_instant_current = diagnostics.motor_instant_current;
 			diagnosticsmsg.elec_integrated_current = diagnostics.elec_integrated_current;
 			diagnosticsmsg.motor_integrated_current = diagnostics.motor_integrated_current;
+			diagnosticsmsg.average_loop_freq = 1.0 / (loopDurationSum/(double)loopCounter);
 			diagnostics_pub.publish(diagnosticsmsg);
 		}
 		first_time=false;
 		r.sleep();	
 		ros::spinOnce();
+		loopDurationSum += (ros::Time::now() - current_time).toSec();
+		loopCounter++;
+		
 	}	
 
 }

@@ -11,3 +11,5 @@ int32 elec_instant_current
 int32 motor_instant_current
 int32 elec_integrated_current
 int32 motor_integrated_current
+
+float32 average_loop_freq
