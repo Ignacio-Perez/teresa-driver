@@ -43,18 +43,71 @@
 namespace utils
 {
 
+/**
+ * A generic serial interface
+ */
 class SerialInterface
 {
 public:
+	/**
+	 * Constructor
+	 *
+	 * @param devicename 
+	 * @param hardware_flow_control 
+	 */
 	SerialInterface(const std::string& devicename, bool hardware_flow_control);
 	virtual ~SerialInterface();
+	/**
+	 * Open the device
+	 *
+	 * @param baudrate 
+	 * @param mode
+	 */
 	virtual bool open(int baudrate = B115200, int mode = O_RDWR | O_NOCTTY | O_NDELAY);
+	/**
+	 * Close the device
+	 *
+	 * @return true if success, false otherwise
+	 */
 	virtual bool close();
+	/**
+	 * Is the device open?
+	 */
 	bool isOpen();
+	/**
+	 * Get the last error message
+	 *
+	 * @return the last error message
+	 */
 	const std::string& getLastError();
+	/**
+	 * Get the number of incoming bytes
+	 *
+	 * @param bytes[OUT] the number of incoming bytes
+	 * @return true if success, false otherwise
+	 */
 	bool incomingBytes(int& bytes);
+	/**
+	 * Write function
+	 *
+	 * @param buf the buffer with the bytes to write
+	 * @param buffer_size the size of the buffer
+	 * @return true if success, false otherwise
+	 */
 	bool write(const unsigned char *buf, int buffer_size);
+	/**
+	 * Read function
+	 * 
+	 * @param buffer the buffer to store the received bytes
+	 * @param buffer_size the number of bytes to read and write in the buffer
+	 * @return -1 if fail or the number of read bytes (could be 0)
+	 */
 	int read(unsigned char* buffer, int buffer_size);
+	/**
+	 * Get the device name
+	 *
+	 * @return the device name
+	 */
 	const std::string& getDeviceName() {return devicename;}
 
 protected:

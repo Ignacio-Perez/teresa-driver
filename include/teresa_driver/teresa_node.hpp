@@ -43,52 +43,58 @@
 #include <teresa_driver/Diagnostics.h>
 #include <teresa_driver/simulated_teresa_robot.hpp>
 #include <teresa_driver/idmind_teresa_robot.hpp>
-
-
+#include <teresa_driver/teresa_leds.hpp>
 
 namespace Teresa
 {
 
+/**
+ * Enumeration to manage the status of the tilt and height motors
+ */
 enum MotorStatus {MOTOR_UP, MOTOR_DOWN, MOTOR_STOP};
 
+/**
+ * The ROS node class
+ */
 class Node
 {
 public:
 	Node(ros::NodeHandle& n, ros::NodeHandle& pn);
 	~Node();
-	
 private:
-	void loop();
-	void imuReceived(const sensor_msgs::Imu::ConstPtr& imu);
-	void stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk);
+	void loop(); // The main loop
+	void imuReceived(const sensor_msgs::Imu::ConstPtr& imu); // The IMU callback function
+	void stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk); // The joystick stalk callback funcrion
 	void stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref);
-	void cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel);
+	void cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel); // The Command vel callback function
 	bool teresaDCDC(teresa_driver::Teresa_DCDC::Request  &req,
-			teresa_driver::Teresa_DCDC::Response &res);
+			teresa_driver::Teresa_DCDC::Response &res); // The DCDC service
 
 	bool teresaLeds(teresa_driver::Teresa_leds::Request &req,
-				teresa_driver::Teresa_leds::Response &res);
+				teresa_driver::Teresa_leds::Response &res); // The Leds service
 
-	static void printInfo(const std::string& message){ROS_INFO("%s",message.c_str());}	
-	static void printError(const std::string& message){ROS_ERROR("%s",message.c_str());}
+	static void printInfo(const std::string& message){ROS_INFO("%s",message.c_str());} // Print Info function
+	static void printError(const std::string& message){ROS_ERROR("%s",message.c_str());} // Print Error function
 	
 	ros::NodeHandle& n;
-	double ang_vel;
-	bool imu_error;
-	double yaw;
-	bool imu_first_time;
-	int using_imu;
-	int publish_temperature;
-	int publish_buttons;
-	int publish_volume;
-	int publish_power_diagnostics;
-	int height_velocity;
-	int tilt_velocity;
-	double freq;
+	double ang_vel; // Angular velocity
+	bool imu_error; // IMU error?
+	double yaw; // Yaw angle
+	bool imu_first_time; // Is it the first time we get IMU data?
+	int using_imu; // Are we using an IMU?
+	int publish_temperature; // Are we going to publish the temperatures? (1 = yes, 0 = no)
+	int publish_buttons; // Are we going to publish the arcade buttons?
+	int publish_volume;  // Are we going to publish the rotary volumen control?
+	int publish_diagnostics; // Are we going to publish diagnostics?
+	int height_velocity; // The configured heght motor velocity in mm/s
+	int tilt_velocity; // The configured tilt motor velocity in degrees/s
+	double freq; // Main loop frequency;
+	// Frame IDs
 	std::string base_frame_id;
 	std::string odom_frame_id;
 	std::string head_frame_id;
 	std::string stalk_frame_id;
+	// Publishers and subscribers
 	ros::Publisher odom_pub;
 	ros::Subscriber cmd_vel_sub;
 	ros::Subscriber imu_sub;
@@ -99,14 +105,19 @@ private:
 	ros::Publisher volume_pub;
 	ros::Publisher diagnostics_pub;
 	ros::Publisher temperature_pub;	
+	// Services
 	ros::ServiceServer dcdc_service;
 	ros::ServiceServer leds_service;
-	ros::Time imu_time;
-	ros::Time imu_past_time;
-	ros::Time cmd_vel_time;
-	Robot *teresa;
-	MotorStatus tiltMotor;
-	MotorStatus heightMotor;
+
+	// Some time stamps... see the code below
+	ros::Time imu_time; 
+	ros::Time imu_past_time; 
+	ros::Time cmd_vel_time; 
+
+	Robot *teresa; // The robot interface
+	MotorStatus tiltMotor; // Status of the tilt motor
+	MotorStatus heightMotor; // Status of the height motor
+	Leds *leds; // A little bit of fun
 };
 
 inline
@@ -118,14 +129,17 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
   imu_first_time(true),
   teresa(NULL),
   tiltMotor(MOTOR_STOP),
-  heightMotor(MOTOR_STOP)
+  heightMotor(MOTOR_STOP),
+  leds(NULL)
 {
 	try
 	{
 		int simulation;
 		std::string board1;
 		std::string board2;
+		std::string leds_pattern;
 		int initial_dcdc_mask,final_dcdc_mask,number_of_leds;
+	        // Parameters
 		pn.param<std::string>("board1",board1,"/dev/ttyUSB0");
 		pn.param<std::string>("board2",board2,"/dev/ttyUSB1");
 		pn.param<std::string>("base_frame_id", base_frame_id, "/base_link");
@@ -137,19 +151,24 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<int>("publish_temperature", publish_temperature, 1);
 		pn.param<int>("publish_buttons", publish_buttons, 1);
 		pn.param<int>("publish_volume", publish_volume, 1);
-		pn.param<int>("publish_power_diagnostics",publish_power_diagnostics,1);
+		pn.param<int>("publish_diagnostics",publish_diagnostics,1);
 		pn.param<int>("number_of_leds",number_of_leds,38);
 		pn.param<int>("initial_dcdc_mask",initial_dcdc_mask,0xFF);
 		pn.param<int>("final_dcdc_mask",final_dcdc_mask,0x00);
 		pn.param<double>("freq",freq,20);
 		pn.param<int>("height_velocity",height_velocity,20);
 		pn.param<int>("tilt_velocity",tilt_velocity,2);
+		pn.param<std::string>("leds_pattern",leds_pattern,"null");
+		leds = getLedsPattern(leds_pattern,number_of_leds);
 		if (simulation) {
 			using_imu=0;
-			teresa = new SimulatedRobot();
+			// Using a simulated robot, for debugging and testing
+			teresa = new SimulatedRobot(); 
 		} else {
+			// Using the IdMind robot
 			teresa = new IdMindRobot(board1,board2,initial_dcdc_mask,final_dcdc_mask,number_of_leds,printInfo,printError);
 		}
+		// Publishers and subscribers
 		odom_pub = pn.advertise<nav_msgs::Odometry>(odom_frame_id, 5);
 		cmd_vel_sub = n.subscribe<geometry_msgs::Twist>("/cmd_vel",1,&Node::cmdVelReceived,this);
 		if (using_imu) {
@@ -166,14 +185,17 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		if (publish_temperature) {
 			temperature_pub = pn.advertise<teresa_driver::Temperature>("/temperatures",5);
 		}
-		if (publish_power_diagnostics) {
+		if (publish_diagnostics) {
 			diagnostics_pub = pn.advertise<teresa_driver::Diagnostics>("/teresa_diagnostics",5);
 		}
 		batteries_pub = pn.advertise<teresa_driver::Batteries>("/batteries",5);	
+		// Services
 		dcdc_service = n.advertiseService("teresa_dcdc", &Node::teresaDCDC,this);		
 		leds_service = n.advertiseService("teresa_leds", &Node::teresaLeds,this);
+		// Run the main loop
 		loop();
 	} catch (const char* msg) {
+		// I have a bad feeling about this...
 		ROS_FATAL("%s",msg);
 	}	
 }
@@ -182,99 +204,111 @@ inline
 Node::~Node()
 {
 	delete teresa;
+	delete leds;
 }
 
+// IMU callback function
 inline
 void Node::imuReceived(const sensor_msgs::Imu::ConstPtr& imu)
 {
 	imu_time = ros::Time::now();
+	// The first time we get data from the IMU
 	if (imu_first_time) {
 		imu_past_time = imu->header.stamp;
 		imu_first_time=false;
 		return;
 	}
+	// Calculate the duration since the last received message
 	double duration = (imu->header.stamp - imu_past_time).toSec();
+	// Update the time of the last received message
 	imu_past_time=imu->header.stamp; 
-	tf::Quaternion imu_quaternion;
-    	geometry_msgs::Quaternion imu_quaternion_msg;
+	// Is the robot stopped?
     	if (teresa->isStopped() || fabs(imu->angular_velocity.z) < 0.04) {
 		ang_vel = 0.0;
 		return;
 	}
+	// Get angular velocity from IMU
 	ang_vel = imu->angular_velocity.z;
+	// Increment yaw angle
 	yaw += ang_vel * duration;
 }
 
+// Stalk callback function (command from joystick)
 inline
 void Node::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
-{
-	if (stalk->head_up && heightMotor!=MOTOR_UP) {
+{ 
+	if (stalk->head_up && heightMotor!=MOTOR_UP) { // height motor UP
 		teresa->setHeightVelocity(height_velocity);
 		teresa->setHeight(MAX_HEIGHT_MM);
 		heightMotor = MOTOR_UP;
 	}
-	else
+	else // height motor DOWN
 	if (stalk->head_down && heightMotor!=MOTOR_DOWN) {
 		teresa->setHeightVelocity(height_velocity);
 		teresa->setHeight(MIN_HEIGHT_MM);
 		heightMotor = MOTOR_DOWN;
 	}
-	else if (heightMotor!=MOTOR_STOP){
+	else if (heightMotor!=MOTOR_STOP){ // height motor STOP
 		teresa->setHeightVelocity(0);
 		heightMotor = MOTOR_STOP;
 	}
 	
-	if (stalk->tilt_up && tiltMotor!=MOTOR_UP) {
+	if (stalk->tilt_up && tiltMotor!=MOTOR_UP) { //tilt motor UP
 		teresa->setTiltVelocity(tilt_velocity);
 		teresa->setTilt(MAX_TILT_ANGLE_DEGREES);
 		tiltMotor = MOTOR_UP;
 	}
 	else
-	if (stalk->tilt_down && tiltMotor!=MOTOR_DOWN) {
+	if (stalk->tilt_down && tiltMotor!=MOTOR_DOWN) { // tilt motor DOWN
 		teresa->setTiltVelocity(tilt_velocity);
 		teresa->setTilt(MIN_TILT_ANGLE_DEGREES);
 		tiltMotor = MOTOR_DOWN;
 	}
-	else if (tiltMotor!=MOTOR_STOP){
+	else if (tiltMotor!=MOTOR_STOP){ // tilt motor STOP
 		teresa->setTiltVelocity(0);
 		tiltMotor = MOTOR_STOP;
 	}
 }
 
+// StalkRef callback function
 inline
 void Node::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
-{
+{ 
 	teresa->setHeightVelocity(height_velocity);
 	teresa->setTiltVelocity(tilt_velocity);
-	teresa->setHeight((int)std::round(stalk_ref->head_height*1000));
-        teresa->setTilt((int)std::round(stalk_ref->head_tilt * 57.2958));
+	teresa->setHeight((int)std::round(stalk_ref->head_height*1000)); // From meters to millimeters
+        teresa->setTilt((int)std::round(stalk_ref->head_tilt * 57.2958)); // From radians to degrees
 }
 
+// CmdVel callback funcrion
 inline
 void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
-{
-	cmd_vel_time = ros::Time::now();
-	if (!imu_error) {
+{ 
+	cmd_vel_time = ros::Time::now(); // Get the time
+	if (!imu_error) { // If IMU error, do not move!
 		teresa->setVelocity( cmd_vel->linear.x,cmd_vel->angular.z);
 	}
 }
 
+// DCDC service
 inline
 bool Node::teresaDCDC(teresa_driver::Teresa_DCDC::Request  &req,
 			teresa_driver::Teresa_DCDC::Response &res)
-{
+{ 
 	res.success = teresa->enableDCDC(req.mask);
 	return true;
 }
 
+// Leds service
 inline
 bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 			teresa_driver::Teresa_leds::Response &res)
-{
+{ 
 	res.success = teresa->setLeds(req.rgb_values);
 	return true;
 }
 
+// Main Loop
 inline
 void Node::loop()
 {
@@ -303,7 +337,6 @@ void Node::loop()
 	int temperature_left_motor,temperature_right_motor,temperature_left_driver,temperature_right_driver;
 	bool tilt_overheat,height_overheat;
 	PowerDiagnostics diagnostics;
-
 	double loopDurationSum=0;
 	unsigned long loopCounter=0;
 	while (n.ok()) {
@@ -338,8 +371,6 @@ void Node::loop()
 			pos_x += imd*std::cos(yaw + ang_vel*dt/2);
 			pos_y += imd*std::sin(yaw + ang_vel*dt/2);
 		} 
-		
-		
 		// ******************************************************************************************
 		//first, we'll publish the transforms over tf
 		geometry_msgs::TransformStamped odom_trans;
@@ -449,8 +480,8 @@ void Node::loop()
 			temperature_pub.publish(temperaturemsg);
 		}
 
-		//publish power diagnostics
-		if (publish_power_diagnostics && teresa->getPowerDiagnostics(diagnostics)) {
+		//publish diagnostics
+		if (publish_diagnostics && teresa->getPowerDiagnostics(diagnostics)) {
 			teresa_driver::Diagnostics diagnosticsmsg;
 			diagnosticsmsg.header.stamp = current_time;
 			diagnosticsmsg.elec_bat_voltage = diagnostics.elec_bat_voltage;
@@ -465,6 +496,12 @@ void Node::loop()
 			diagnosticsmsg.motor_integrated_current = diagnostics.motor_integrated_current;
 			diagnosticsmsg.average_loop_freq = 1.0 / (loopDurationSum/(double)loopCounter);
 			diagnostics_pub.publish(diagnosticsmsg);
+		}
+
+		// Leds Pattern
+		if (leds!=NULL) {
+			teresa->setLeds(leds->getLeds());
+			leds->update();
 		}
 		first_time=false;
 		r.sleep();	

@@ -33,8 +33,9 @@
 namespace Teresa
 {
 
-
-
+/**
+ * An implementation of Teresa::Robot for debugging and testing
+ */
 class SimulatedRobot : public Robot
 {
 public:

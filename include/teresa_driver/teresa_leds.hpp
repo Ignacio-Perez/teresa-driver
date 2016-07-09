@@ -1,6 +1,6 @@
 /***********************************************************************/
 /**                                                                    */
-/** timer.hpp                                                          */
+/** idmind_teresa_robot.hpp                                            */
 /**                                                                    */
 /** Copyright (c) 2016, Service Robotics Lab.                          */ 
 /**                     http://robotics.upo.es                         */
@@ -24,42 +24,90 @@
 /***********************************************************************/
 
 
-#ifndef _TIMER_HPP_
-#define _TIMER_HPP_
+#ifndef _TERESA_LEDS_HPP_
+#define _TERESA_LEDS_HPP_
 
-#include <chrono>
-
-namespace utils
+namespace Teresa
 {
+
 /**
- * A basic Timer
+ * A virtual class to generate light patterns by using the leds of the robot
+ *
+ * This will be done updating a vector of RGB values 
  */
-class Timer
+class Leds
 {
 public:
-    
-    Timer() : initiated(false) {}
-    /**
-     * Init (or re-init) the counter
-     */
-    void init() { beg_ = clock_::now(); initiated=true;}
-    /**
-     * Get the elapsed time from the last init() call
-     */
-    double elapsed() const { 
-        return initiated?std::chrono::duration_cast<second_>
-            (clock_::now() - beg_).count():0; }
- 
-private:
-    typedef std::chrono::high_resolution_clock clock_;
-    typedef std::chrono::duration<double, std::ratio<1> > second_;
-    bool initiated; 
-    std::chrono::time_point<clock_> beg_;
-  
+	Leds() {}
+	virtual ~Leds() {}
+	/**
+	 * Update the RGB array, this will be called in the main loop
+	 */	 
+	virtual void update() = 0;
+	/**
+	 * Get the current RGB array of size N_LEDS*3
+	 *
+	 * @return vector of leds [RED_1,GREEN_1,BLUE_1,...,RED_N,GREEN_N,BLUE_N]
+	 */
+	virtual const std::vector<unsigned char>& getLeds() const = 0;
 };
 
 
+/**
+ * A red light moving side to side
+ */ 
+class KnightRiderLeds : public Leds
+{
+public:
+	KnightRiderLeds(unsigned char numberOfLeds)
+	:forward(true), 
+         activated(0)
+	{
+		leds.resize(numberOfLeds*3);
+		leds[0]=255;
+	}
+	virtual ~KnightRiderLeds() {}	
+	virtual void update()
+	{
+		leds[activated]=0;
+		if (forward) {
+			activated+=3;
+			if (activated>=(int)leds.size()) {
+				activated=leds.size()-3;
+				forward=false;
+			}
+		} else {
+			activated-=3;
+			if (activated<0) {
+				activated=0;
+				forward=true;
+			}
+		}
+		
+		leds[activated]=255;
+	}
+	virtual const std::vector<unsigned char>& getLeds() const {return leds;}
+private:
+	bool forward;
+	int activated;
+	std::vector<unsigned char> leds;
 
+};
+
+
+/**
+ * Get the led pattern object from a name, update this function if more patterns are implemented
+ * The name can be used in the parameter "leds_pattern" of the launch file
+ */
+Leds *getLedsPattern(const std::string& leds_pattern, unsigned char number_of_leds)
+{
+	if (leds_pattern == "knight_rider") {
+		return new KnightRiderLeds(number_of_leds); 
+	}
+	return NULL;
 }
+
+
+};
 
 #endif

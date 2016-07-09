@@ -70,34 +70,74 @@ namespace Teresa
 // BOARD1 & BOARD2 COMMANDS
 #define GET_FIRMWARE_VERSION_NUMBER  0x20
 
-
+/**
+ * Generic IdMind board
+ */
 class IdMindBoard
 {
 public:
+	/**
+	 * Constructor
+	 *
+	 * @param device to connect (i.e. /dev/ttyUSB0)
+	 * @param name to show in messages (i.e. board2)
+	 * @param printInfo function to print information messages
+	 * @param printError function to print error messages
+	 */
 	IdMindBoard(const std::string& device, const std::string& name,
 			void (*printInfo)(const std::string& message),
 			void (*printError)(const std::string& message));
 	~IdMindBoard();
+	/**
+	 * Open device
+	 *
+	 * @return true if success, false otherwise
+	 */
 	bool open();
+	/**
+	 * Communicate with board, including error management
+	 *
+	 * @param command_size number of bytes of the command to send
+	 * @param response_size number of bytes of the response to read
+	 * @precondition the command buffer (see below) should contain the data to send
+	 * @return true if success, false otherwise
+	 */
 	bool communicate(int command_size, int response_size);
+	/**
+	 * Get the name of the board
+	 *
+	 * @return the name of the board
+	 */
 	const std::string& getName() const {return name;}
-	unsigned char command[512];
-	unsigned char response[512];
-private:
-	bool checksum(int response_size);
-	bool flush();
-	utils::SerialInterface board;
-	std::string name;
-	void (*printInfo)(const std::string& message);
-	void (*printError)(const std::string& message);
-	int counter;	
 	
+	unsigned char command[512]; // Command buffer
+	unsigned char response[512]; // Response buffer
+private:
+	bool checksum(int response_size); // Checksum function
+	bool flush(); // Flush incoming bytes
+	utils::SerialInterface board; // Serial interface for communications
+	std::string name; // Name of the board
+	void (*printInfo)(const std::string& message); // Function to print Information
+	void (*printError)(const std::string& message);  // Function to print Errors
+	int counter; // Message counter (from 0 to 255)	
 };
 
-
+/**
+ * The IdMind Teresa Robot interface
+ */
 class IdMindRobot : public Robot
 {
 public:
+	/**
+	 * Constructor
+	 *
+	 * @param board1 device of the board1 (i.e. /dev/ttyUSB0)
+	 * @param board2 device of the board2 (i.e. /dev/ttyUSB1)
+	 * @param initial_dcdc_mask initial mask for DCDC to be set now (see IdMind documentation)
+	 * @param final_dcdc_mask final mask for DCDC, to be set in the destructor
+	 * @param printInfo function to print information 
+	 * @param printError function to print errors
+	 */
 	IdMindRobot(const std::string& board1,
 			const std::string& board2,
                         unsigned char initial_dcdc_mask,
@@ -106,8 +146,8 @@ public:
 			void (*printInfo)(const std::string& message) = defaultPrint,
 			void (*printError)(const std::string& message) = defaultPrint);
 			
- 
 	virtual ~IdMindRobot();
+	// Implementation of inherited virtual functions (robot interface)
 	virtual bool setVelocity(double linear, double angular);
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
@@ -134,27 +174,26 @@ public:
 					unsigned char& charger_status);
 	virtual bool getPowerDiagnostics(PowerDiagnostics& diagnostics);
 private:
-	static int16_t bufferToInt(const unsigned char* buffer);
-	static uint16_t bufferToUnsignedInt(const unsigned char* buffer);
 
-	bool setFans(bool fans);
-	bool enableTiltMotor(bool enable);
-	bool enableHeightMotor(bool enable);
-	bool calibrate(bool calibrate_tilt_system, bool calibrate_height_system);
-	bool setNumberOfLeds(unsigned char number_of_leds);	
-	static void defaultPrint(const std::string& message){std::cout<<message<<std::endl;}
+	static int16_t bufferToInt(const unsigned char* buffer); // buffer [High_byte:Low_byte] to signed int16
+	static uint16_t bufferToUnsignedInt(const unsigned char* buffer); // buffer [High_byte:Low_biyte] to unsigned int16
 
-	IdMindBoard board1;
-	IdMindBoard board2;
-	unsigned char number_of_leds;
+	bool setFans(bool fans); // Enable or disable fans
+	bool enableTiltMotor(bool enable); // Enable or disable tilt motor
+	bool enableHeightMotor(bool enable); // Enable or disable height motor
+	bool calibrate(bool calibrate_tilt_system, bool calibrate_height_system); // calibrate height and/or tilt system
+	bool setNumberOfLeds(unsigned char number_of_leds); // Set the number of leds	 
+	static void defaultPrint(const std::string& message){std::cout<<message<<std::endl;} // A default printing function
 
-	void (*printInfo)(const std::string& message);
-	void (*printError)(const std::string& message);
+	IdMindBoard board1; // Sensors board
+	IdMindBoard board2; // Motors board
+	unsigned char number_of_leds; // Number of configured leds
 
-	bool is_stopped;
-	int final_dcdc_mask;
-	
+	void (*printInfo)(const std::string& message); // Function to print information
+	void (*printError)(const std::string& message); // Function to print errors
 
+	bool is_stopped; // Is robot stopped?
+	int final_dcdc_mask;  // The DCDC mask to set in the destructor
 };
 
 
@@ -182,6 +221,7 @@ bool IdMindBoard::open()
 		return false;
 	}
 	printInfo(name+" device: "+board.getDeviceName());
+	// Get firmware version
 	command[0] = GET_FIRMWARE_VERSION_NUMBER;
 	if (!communicate(1,29)) {
 		printError("Cannot get firmware version from "+name);
@@ -194,11 +234,12 @@ bool IdMindBoard::open()
 
 inline
 bool IdMindBoard::checksum(int response_size)
-{
-	uint16_t checksum1 = (int)response[response_size-2];
+{ // last two bytes of each response are [Checksum_high_byte:Checksum_low_byte]
+	uint16_t checksum1 = (int)response[response_size-2]; 
 	checksum1 <<= 8; 
 	checksum1 += (int)response[response_size-1];
 	uint16_t checksum2=0;
+	// The checksum should be the sum of all bytes as a unsigned int16
 	for(int i=0; i<response_size-2; i++)	{
 		checksum2 += (int)response[i];
    	}
@@ -213,6 +254,7 @@ bool IdMindBoard::flush()
 		printError("Cannot flush");
 		return false;
 	}
+	// Read incoming bytes
 	while(bytes>0) {
 		int aux = board.read(response,bytes);
 		if (aux==-1) {
@@ -228,9 +270,9 @@ bool IdMindBoard::flush()
 inline
 bool IdMindBoard::communicate(int command_size, int response_size)
 {
-	flush();
+	flush(); // Flush the current incoming bytes
 	int i=0;
-	while(i<WRITTING_TRIES && !board.write(command,command_size)) {
+	while(i<WRITTING_TRIES && !board.write(command,command_size)) { // We will try to write the command message
 		printError("Cannot write to "+name);
 		i++;
 	}
@@ -238,54 +280,55 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 		printError("Communication with "+name+ " aborted due to maximum writting tries reached");
 		return false;
 	}
-	usleep(1);
+	usleep(1); // Time for the board to to begin to proccess
 	int read_bytes=0;
-	int bytes;
-	utils::Timer timer;
-	bool counting_timeout=false;
-	while (read_bytes<response_size) {
-		if (!board.incomingBytes(bytes)) {
+	int bytes; 
+	utils::Timer timer; // Timer to control the timeout  
+	bool counting_timeout=false; // Are we counting?
+	while (read_bytes<response_size) { // While we need more bytes
+		if (!board.incomingBytes(bytes)) { // How many incoming bytes?
 			printError("Communication with "+name+ " aborted due to reading error (cannot get incoming bytes)");
 			return false;
 		}
-		if (bytes==0) {
+		if (bytes==0) { // No incoming bytes... we start/check the timer
 			if (!counting_timeout) {
 				counting_timeout=true;				
-				timer.init();
-			} else if (timer.elapsed()>0.05) {
+				timer.init(); // Start the timer
+			} else if (timer.elapsed()>0.05) { // timeout error
 				printError("Communication with "+name+ " aborted due to reading timeout");
 				return false;
 			}
-			usleep(1);
+			usleep(1); // Give a little more time to the board
 		} else {
-			counting_timeout=false;
-			bytes = std::min(bytes,response_size-read_bytes);
-			int aux = board.read(response+read_bytes,bytes);
+			counting_timeout=false; // no counting timeout
+			bytes = std::min(bytes,response_size-read_bytes); // upper bound for the bytes to read
+			int aux = board.read(response+read_bytes,bytes); // read bytes
 			if (aux==-1) {
 				printError("Communication with "+name+ " aborted due to reading error");
 				return false;
 			}
-			read_bytes += aux;
+			read_bytes += aux; // update number of read bytes
 		}
-	}	
+	}
+	// Response: [Header]...[Message_counter][Checksum_High][Checksum_Low]	
 	
-	if (response[0] != command[0]) {
+	if (response[0] != command[0]) { // The first response byte should be equal to the first command byte
 		printError("Invalid response header from "+name);
 		return false;
 	}
-	if (counter==-1) {
+	if (counter==-1) { // Start message counter
 		counter = response[response_size-3]; 
 	} else {
-		counter++;
-		if (counter==256) {
+		counter++; // Increment message counter
+		if (counter==256) { // from 0 to 255
 			counter=0;
 		}
 	}
-	if (counter != response[response_size-3]) {
+	if (counter != response[response_size-3]) { // Check the message counter
 		printError("Invalid response counter from "+name);
 		return false;
 	}
-	if (!checksum(response_size)) {
+	if (!checksum(response_size)) { // Validate the checksum
 		printError("Invalid checksum from "+name);
 		return false;
 	}
@@ -307,12 +350,13 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
   is_stopped(true),
   final_dcdc_mask(final_dcdc_mask)
 {
-	bool board1_open = IdMindRobot::board1.open();
-	bool board2_open = IdMindRobot::board2.open();
+	bool board1_open = IdMindRobot::board1.open(); // Open Board1 (sensors)
+	bool board2_open = IdMindRobot::board2.open(); // Open Board2 (motors)
 	
+	// Initialization
 	if (!board1_open || 
 		!board2_open || 
-		!enableDCDC(initial_dcdc_mask) ||
+		!enableDCDC(initial_dcdc_mask) || 
 		!setFans(true) ||
 		!enableTiltMotor(true) ||
 		!enableHeightMotor(true) ||
@@ -326,6 +370,16 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
 inline
 IdMindRobot::~IdMindRobot()
 {
+	// Switch off leds
+	if (number_of_leds>0) {
+		std::vector<unsigned char> leds;
+		leds.resize(number_of_leds*3);
+		for (unsigned i=0;i<leds.size();i++) {
+			leds[i]=0;
+		}
+		setLeds(leds);
+	}
+	// Configure DCDC with the final mask
 	enableDCDC(final_dcdc_mask);
 }
 
@@ -378,6 +432,7 @@ bool IdMindRobot::setNumberOfLeds(unsigned char number_of_leds)
 		printError("Cannot set the number of RGB leds");
 		return false;	
 	}
+	IdMindRobot::number_of_leds = number_of_leds;
 	return true;
 }
 
@@ -505,7 +560,7 @@ bool IdMindRobot::getIMD(double& imdl, double& imdr)
 		printError("Cannot get motor velocity ticks");
 		return false;
 	}
-	int16_t inc_left = bufferToInt(board2.response+1);
+	int16_t inc_left = -bufferToInt(board2.response+1);
 	int16_t inc_right = bufferToInt(board2.response+3);
 	imdl = inc_left==0?0:(double)inc_left*0.00024802;
 	imdr = inc_right==0?0:(double)inc_right*0.00024802;

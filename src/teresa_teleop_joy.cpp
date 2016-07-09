@@ -72,6 +72,7 @@ bool panic         = false;
 
 ros::Publisher *stalk_pub_ptr=NULL;
 
+// Joystick call back function
 void joyReceived(const sensor_msgs::Joy::ConstPtr& joy)
 {
 	bool prev_panic = panic;
@@ -133,12 +134,9 @@ void joyReceived(const sensor_msgs::Joy::ConstPtr& joy)
 	}
 		
 	stalk_pub_ptr->publish(stalk);	
-
-
-
 }
 
-
+// Send a command velocity
 void sendCmdVel(double linearVelocity, double angularVelocity, ros::Publisher& vel_pub)
 {
 	geometry_msgs::Twist vel;
@@ -157,8 +155,10 @@ int main(int argc, char** argv)
 	ros::NodeHandle pn("~");
 	
 	double freq;
-	pn.param<double>("freq",freq,FREQ);
 	double panicFreq;
+
+	// Parameters	
+	pn.param<double>("freq",freq,FREQ);
 	pn.param<double>("panic_freq",panicFreq,PANIC_FREQ);
 	pn.param<int>("linear_velocity_axis",linearVelocityAxis,LINEAR_VELOCITY_AXIS);
 	pn.param<int>("angular_velocity_axis",angularVelocityAxis,ANGULAR_VELOCITY_AXIS);
@@ -173,26 +173,28 @@ int main(int argc, char** argv)
 	pn.param<double>("max_linear_velocity",maxLinearVelocity,MAX_LINEAR_VELOCITY);
 	pn.param<double>("max_angular_velocity",maxAngularVelocity,MAX_ANGULAR_VELOCITY);
 
+	// Publishers and subscribers
 	ros::Publisher vel_pub = pn.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 	ros::Publisher stalk_pub = pn.advertise<teresa_driver::Stalk>("/stalk",1);
 	stalk_pub_ptr = &stalk_pub;
 	ros::Subscriber joy_sub = n.subscribe<sensor_msgs::Joy>("/joy", 5, joyReceived);		
 
-	ros::Rate rate(freq);
-	ros::Rate panicRate(panicFreq);
+	ros::Rate rate(freq); // normal frequency
+	ros::Rate panicRate(panicFreq); // frequency when pressing the panic button 
 	bool prevPublishCmdVel=false;
 	
 	while (n.ok()) {
+		// If panic button is pressed, send Cmd_vel[0,0] at a high rate
 		if (panic) {
 			sendCmdVel(0,0,vel_pub);
 			panicRate.sleep();
 		}
 		else {
-			if (publishCmdVel) {
+			if (publishCmdVel) { // Write a cmd_vel if cmd_vel buttons are pressed
 				sendCmdVel(currentLinearVelocity, currentAngularVelocity, vel_pub);	
 			}
 			else
-			if (prevPublishCmdVel) {
+			if (prevPublishCmdVel) { // Stop the robot if cmd_vel buttons are not pressend
 				sendCmdVel(0,0,vel_pub);
 			}
 			prevPublishCmdVel = publishCmdVel;
@@ -201,7 +203,7 @@ int main(int argc, char** argv)
 		
 		ros::spinOnce();
 	}
-	sendCmdVel(0,0,vel_pub);
+	sendCmdVel(0,0,vel_pub); // Stop the robot
 	return 0;
 }
 
