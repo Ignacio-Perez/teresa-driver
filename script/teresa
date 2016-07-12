@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# INSTRUCTIONS:
+# 1.- Put this script in /etc/init.d
+# 2.- Give execution permisions: sudo chmod +x script_name
+# 3.- Change DAEMON variable to the name of the program to run in background
+# 4.- Change NAME variable to the name of this script
+# 5.- Change DESC variable to the description of your daemon
+# 6.- Change the initialization lines if necessary (in start section)
+# 9.- If you want to start your daemon at the startup of the computer and stop it at shutdown:
+#     sudo update-rc.d script_name defaults
+# 10.- If want to remove your daemon from the startup/shutdown:
+#     sudo update-rc.d -f script_name remove
+#
+# In any momment:
+# sudo service daemon_name status
+# sudo service daemon_name start
+# sudo service daemon_name stop
+# sudo service daemon_name restart
+
+
+DAEMON="/home/teresa/catkin_ws/src/teresa-driver/script/launch.bash"
+NAME=teresa
+DESC="Teresa ROS daemon"
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+
+case "$1" in
+start)
+	printf "%-50s" "Starting $NAME..."
+        # Next, there are some lines of initialization, free to change
+        chmod 777 /dev/ttyUSB*
+	# End of initialization, the following are lines to run the daemon, don't change it
+        PID=`sudo -S -u teresa -i /bin/bash -l -c $DAEMON`
+	echo "Saving PID" $PID " to " $PIDFILE
+        if [ -z $PID ]; then
+            printf "%s\n" "Fail"
+        else
+             echo $PID > $PIDFILE
+            printf "%s\n" "Ok"
+        fi
+;;
+status)
+        printf "%-50s" "Checking $NAME..."
+        if [ -f $PIDFILE ]; then
+            PID=`cat $PIDFILE`
+            if [ -z "`ps axf | grep ${PID} | grep -v grep`" ]; then
+                printf "%s\n" "Process dead but pidfile exists"
+            else
+                echo "Running"
+            fi
+        else
+            printf "%s\n" "Service not running"
+        fi
+;;
+stop)
+        printf "%-50s" "Stopping $NAME"
+            PID=`cat $PIDFILE`
+        if [ -f $PIDFILE ]; then
+            kill $PID
+            printf "%s\n" "Ok"
+            rm -f $PIDFILE
+        else
+            printf "%s\n" "pidfile not found"
+        fi
+;;
+
+restart)
+  	$0 stop
+  	$0 start
+;;
+
+*)
+        echo "Usage: $0 {status|start|stop|restart}"
+        exit 1
+esac
