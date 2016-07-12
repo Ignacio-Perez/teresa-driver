@@ -113,11 +113,31 @@ The next topics are published by the *teresa_teleop_joy*:
 
 The *teresa_driver* provides the next services:
 
-* **/teresa_dcdc** in order to set the current DCDC mask (see DCDC output section)
+* **/set_teresa_dcdc** in order to set the current DCDC mask (see DCDC output section)
+
+  * Input:
+    1. uint8 req.mode: 
+      - If req.mode is 0: mask = req.mask
+      - If req.mode is 1: mask = mask | req.mask
+      - If req.mode is 2: mask = mask & ~req.mask 
+    2. uint8 req.mask 
+  * Output:
+    1. bool res.success
+
+* **/get_teresa_dcdc** in order to get the current DCDC mask (see DCDC output section)
+
+  * Input: nothing
+  * Output:
+    1. uint8 res.mask
+    2. bool res.success
 
 * **/teresa_leds** in order to set the RGB leds
 
-
+  * Input: 
+    - uint8[] req.rgb_values: [Red_1, Green_1, Blue_1,..., Red_N, Green_N, Blue_N] where N is the number of existent leds
+  * Output:
+    - bool res.success
+ 
 ## ROS parameters
 
 Parameters of the *teresa_driver* program:

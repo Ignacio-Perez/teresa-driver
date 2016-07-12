@@ -298,8 +298,21 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 inline
 bool Node::setDCDC(teresa_driver::Set_DCDC::Request  &req,
 			teresa_driver::Set_DCDC::Response &res)
-{ 
-	res.success = teresa->enableDCDC(req.mask);
+{
+	if (req.mode>2) {
+		res.success = false;
+	} else if (req.mode == 0) { 
+		res.success = teresa->enableDCDC(req.mask);
+	} else {
+		unsigned char mask;
+		if (!teresa->getDCDC(mask)) {
+			res.success = false;
+		} else if (req.mode == 1) { 
+			res.success = teresa->enableDCDC(mask | req.mask);
+		} else { 
+			res.success = teresa->enableDCDC(mask & ~req.mask); 
+		} 
+	}
 	return true;
 }
 
