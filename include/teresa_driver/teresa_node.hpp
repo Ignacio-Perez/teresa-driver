@@ -38,7 +38,8 @@
 #include <teresa_driver/Buttons.h>
 #include <teresa_driver/Volume.h>
 #include <teresa_driver/Batteries.h>
-#include <teresa_driver/Teresa_DCDC.h>
+#include <teresa_driver/Set_DCDC.h>
+#include <teresa_driver/Get_DCDC.h>
 #include <teresa_driver/Teresa_leds.h>
 #include <teresa_driver/Diagnostics.h>
 #include <teresa_driver/simulated_teresa_robot.hpp>
@@ -67,9 +68,10 @@ private:
 	void stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk); // The joystick stalk callback funcrion
 	void stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref);
 	void cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel); // The Command vel callback function
-	bool teresaDCDC(teresa_driver::Teresa_DCDC::Request  &req,
-			teresa_driver::Teresa_DCDC::Response &res); // The DCDC service
-
+	bool setDCDC(teresa_driver::Set_DCDC::Request  &req,
+			teresa_driver::Set_DCDC::Response &res); // Set DCDC service
+	bool getDCDC(teresa_driver::Get_DCDC::Request  &req,
+			teresa_driver::Get_DCDC::Response &res); // Get DCDC service
 	bool teresaLeds(teresa_driver::Teresa_leds::Request &req,
 				teresa_driver::Teresa_leds::Response &res); // The Leds service
 
@@ -106,7 +108,8 @@ private:
 	ros::Publisher diagnostics_pub;
 	ros::Publisher temperature_pub;	
 	// Services
-	ros::ServiceServer dcdc_service;
+	ros::ServiceServer set_dcdc_service;
+	ros::ServiceServer get_dcdc_service;
 	ros::ServiceServer leds_service;
 
 	// Some time stamps... see the code below
@@ -190,7 +193,8 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		}
 		batteries_pub = pn.advertise<teresa_driver::Batteries>("/batteries",5);	
 		// Services
-		dcdc_service = n.advertiseService("teresa_dcdc", &Node::teresaDCDC,this);		
+		set_dcdc_service = n.advertiseService("set_teresa_dcdc", &Node::setDCDC,this);
+		get_dcdc_service = n.advertiseService("get_teresa_dcdc", &Node::getDCDC,this);				
 		leds_service = n.advertiseService("teresa_leds", &Node::teresaLeds,this);
 		// Run the main loop
 		loop();
@@ -290,14 +294,25 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 	}
 }
 
-// DCDC service
+// Set DCDC service
 inline
-bool Node::teresaDCDC(teresa_driver::Teresa_DCDC::Request  &req,
-			teresa_driver::Teresa_DCDC::Response &res)
+bool Node::setDCDC(teresa_driver::Set_DCDC::Request  &req,
+			teresa_driver::Set_DCDC::Response &res)
 { 
 	res.success = teresa->enableDCDC(req.mask);
 	return true;
 }
+
+// Get DCDC service
+inline
+bool Node::getDCDC(teresa_driver::Get_DCDC::Request  &req,
+			teresa_driver::Get_DCDC::Response &res)
+{ 
+	res.mask = 0;
+	res.success = teresa->getDCDC(res.mask);
+	return true;
+}
+
 
 // Leds service
 inline

@@ -29,7 +29,8 @@ add_message_files(
 
 add_service_files(
   FILES
-  Teresa_DCDC.srv
+  Get_DCDC.srv
+  Set_DCDC.srv
   Teresa_leds.srv
 )
 

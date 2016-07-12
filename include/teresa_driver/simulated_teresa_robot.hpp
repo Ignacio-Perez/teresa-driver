@@ -92,8 +92,14 @@ public:
 	virtual bool enableDCDC(unsigned char mask)
 	{
 		char buffer[32];
+		dcdc_mask=mask;
 		sprintf(buffer,"DCDC mask: %02X",mask);
 		std::cout<<buffer<<std::endl;
+		return true;
+	}
+	virtual bool getDCDC(unsigned char& mask)
+	{
+		mask=dcdc_mask;
 		return true;
 	}
 	virtual bool setLeds(const std::vector<unsigned char>& leds){std::cout<<"Set Leds"<<std::endl;return true;}
@@ -122,7 +128,9 @@ private:
 	double current_left_meters;
 	double current_right_meters;
 	bool is_stopped;
+	unsigned char dcdc_mask;	
 	utils::Timer timer;
+	
 
 };
 
@@ -138,7 +146,8 @@ SimulatedRobot::SimulatedRobot()
   right_meters(0),
   current_left_meters(0),
   current_right_meters(0),
-  is_stopped(true)
+  is_stopped(true),
+  dcdc_mask(0xFF)
 {
 }
 

@@ -193,6 +193,14 @@ public:
 	 * @return true if success, false otherwise
 	 */
 	virtual bool enableDCDC(unsigned char mask) = 0;
+
+	/**
+	 * get DCDC status
+	 *
+	 * @param[out] mask get the current binary mask [HGFEDCBA]
+	 * @return true if success, false otherwise
+	 */
+	virtual bool getDCDC(unsigned char& mask) = 0;
 	/**
 	 * set RGB leds
 	 *

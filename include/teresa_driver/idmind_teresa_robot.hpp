@@ -46,6 +46,7 @@ namespace Teresa
 #define GET_POWER_CURRENT            0x51
 #define GET_BATTERIES_LEVEL          0x52
 #define GET_CHARGER_STATUS           0x53
+#define GET_ENABLE_DCDC_OUTPUT       0x57
 
 // BOARD2 COMMANDS
 #define SET_MOTOR_VELOCITY           0x30
@@ -166,6 +167,7 @@ public:
 					bool& tiltDriverOverheat, 
 					bool& heightDriverOverheat);
 	virtual bool enableDCDC(unsigned char mask);
+	virtual bool getDCDC(unsigned char& mask);
 	virtual bool setLeds(const std::vector<unsigned char>& leds);
 	virtual bool getBatteryStatus(unsigned char& elec_level, 
 					unsigned char& PC1_level, 
@@ -702,6 +704,18 @@ bool IdMindRobot::enableDCDC(unsigned char mask)
 	char buffer[32];
 	sprintf(buffer,"DCDC mask: %02X",mask);
 	printInfo(buffer);
+	return true;
+}
+
+inline
+bool IdMindRobot::getDCDC(unsigned char& mask)
+{
+	board1.command[0] = GET_ENABLE_DCDC_OUTPUT;
+	if (!board1.communicate(1,5)) {
+		printError("Cannot get DCDC outputs");
+		return false;
+	}
+	mask = board1.response[1];
 	return true;
 }
 

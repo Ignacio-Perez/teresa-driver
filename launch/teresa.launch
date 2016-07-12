@@ -4,6 +4,9 @@
    <!-- This launch roscore -->
    <master auto="start"/>
 
+  <!--static TFs -->
+  <include file="$(find teresa_driver)/launch/static_tfs.launch" />
+
   <!-- IMU -->
   <node pkg="receive_xsens" type="receive_xsens" name="receive_xsens" output="screen" respawn="true" />
 
@@ -40,5 +43,9 @@
     <!-- teresa joystick driver -->
    <node pkg="teresa_driver" type="teresa_teleop_joy" name="teleop" output="screen" respawn="false">
    </node>
+
+
+   <!-- Xtions -->
+   <!--<include file="$(find teresa_driver)/launch/xtions.launch" />-->
 
 </launch>
