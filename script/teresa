@@ -19,7 +19,7 @@
 # sudo service daemon_name restart
 
 
-DAEMON="/home/teresa/catkin_ws/src/teresa-driver/script/launch.bash"
+DAEMON="/home/teresa/teresa_catkin_pkgs/src/teresa-driver/script/launch.bash"
 NAME=teresa
 DESC="Teresa ROS daemon"
 PIDFILE=/var/run/$NAME.pid
