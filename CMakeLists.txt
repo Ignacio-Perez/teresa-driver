@@ -53,9 +53,9 @@ include_directories(
 )
 
 add_executable(teresa_node src/teresa_node.cpp)
-add_dependencies(teresa_node teresa_ros_driver_gencpp teresa_ros_driver_generate_messages_cpp)
+add_dependencies(teresa_node teresa_driver_gencpp teresa_driver_generate_messages_cpp)
 add_executable(teresa_teleop_joy src/teresa_teleop_joy.cpp)
-add_dependencies(teresa_teleop_joy teresa_ros_driver_gencpp teresa_ros_driver_generate_messages_cpp)
+add_dependencies(teresa_teleop_joy teresa_driver_gencpp teresa_driver_generate_messages_cpp)
 
 target_link_libraries(teresa_node
    ${catkin_LIBRARIES}
