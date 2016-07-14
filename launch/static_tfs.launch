@@ -7,16 +7,16 @@
    <node pkg="tf" type="static_transform_publisher" name="hokuyo_back_tf" args="-0.24 0 0.315 3.14 0 0 /base_link /laserback 100" />
 
    <!-- dalsa and fish eye -->	
-   <node pkg="tf" type="static_transform_publisher" name="dalsa_tf" args="0.08 0.15 0 0 0 0 /giraff_stalk /dalsa_camera 100" />
-   <node pkg="tf" type="static_transform_publisher" name="giraff_camera_tf" args="0.0 0.0 0.17 0 0 0 /giraff_head /giraff_camera 100" />
+   <node pkg="tf" type="static_transform_publisher" name="dalsa_tf" args="0.08 0.15 0 0 0 0 /stalk_head /dalsa_camera 100" />
+   <node pkg="tf" type="static_transform_publisher" name="fisheye_camera_tf" args="0.0 0.0 0.17 0 0 0 /stalk_head /fisheye_camera 100" />
 
    <!-- xtion people localization -->
-   <node pkg="tf" type="static_transform_publisher" name="xtion_people_tf" args="0.045 0.0 -0.425 0.05 0.07 0.0 /giraff_stalk /xtionPeople_link 100" /> 
+   <node pkg="tf" type="static_transform_publisher" name="xtion_people_tf" args="0.045 0.0 -0.425 0.05 0.07 0.0 /stalk_head /xtionPeople_link 100" /> 
    <node pkg="tf" type="static_transform_publisher" name="xtion_people_depth_tf" args="0.0 0.0 0.0 1.5707963267948966 0.0 1.5707963267948966 /xtionPeople_link /xtionPeople_depth_optical_frame 100" /> <!--x:-0.27 y:0.09-->
    <node pkg="tf" type="static_transform_publisher" name="xtion_people_rgb_tf" args="0.0 0.0 0.0 3.141592653589793 0.0 0.0 /xtionPeople_depth_optical_frame /xtionPeople_rgb_optical_frame 100" /> <!--x:-0.27 y:0.09-->
 
    <!-- xtion navigation -->
-   <node pkg="tf" type="static_transform_publisher" name="xtion_nav_tf" args="-0.13 0.03 -0.23 0.0 0.84 0.0 /giraff_stalk /xtionNav_link 100" />
+   <node pkg="tf" type="static_transform_publisher" name="xtion_nav_tf" args="0.05 0.03 -0.23 0.0 0.84 0.0 /stalk_head /xtionNav_link 100" />
 
    
 
