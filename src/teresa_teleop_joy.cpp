@@ -24,6 +24,7 @@
 /***********************************************************************/
 
 #include <ros/ros.h>
+#include <string>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/Joy.h>
 #include <teresa_driver/Stalk.h>
@@ -153,7 +154,7 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "TeresaTeleopJoy");
 	ros::NodeHandle n;
 	ros::NodeHandle pn("~");
-	
+	std::string cmd_vel_id;
 	double freq;
 	double panicFreq;
 
@@ -172,9 +173,8 @@ int main(int argc, char** argv)
 	pn.param<int>("tilt_down_button",tiltDownButton,TILT_DOWN_BUTTON);
 	pn.param<double>("max_linear_velocity",maxLinearVelocity,MAX_LINEAR_VELOCITY);
 	pn.param<double>("max_angular_velocity",maxAngularVelocity,MAX_ANGULAR_VELOCITY);
-
-	// Publishers and subscribers
-	ros::Publisher vel_pub = pn.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
+	pn.param<std::string>("cmd_vel_id",cmd_vel_id,"/cmd_vel");
+	ros::Publisher vel_pub = pn.advertise<geometry_msgs::Twist>(cmd_vel_id, 1);
 	ros::Publisher stalk_pub = pn.advertise<teresa_driver::Stalk>("/stalk",1);
 	stalk_pub_ptr = &stalk_pub;
 	ros::Subscriber joy_sub = n.subscribe<sensor_msgs::Joy>("/joy", 5, joyReceived);		
