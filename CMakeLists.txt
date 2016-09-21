@@ -25,6 +25,7 @@ add_message_files(
   Buttons.msg
   Temperature.msg
   Diagnostics.msg
+  CmdVelRaw.msg
 )
 
 add_service_files(

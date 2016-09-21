@@ -48,6 +48,7 @@ namespace Teresa
 
 
 
+
 struct PowerDiagnostics
 {
 	double elec_bat_voltage;     // V
@@ -80,6 +81,14 @@ public:
 	 * @return true if success, false otherwise
 	 */
 	virtual bool setVelocity(double linear, double angular) = 0;
+	/**
+	 * Set the raw velocity
+	 *
+	 * @param[in] leftWheelRef the left wheel velocity reference 
+	 * @param[in] rightWheelRef the right wheel velocity reference
+	 * @return true if success, false otherwise
+	 */
+	virtual bool setVelocityRaw(int16_t leftWheelRef, int16_t rightWheelRef) = 0;
 	/**
 	 * Check if the robot is stopped
 	 *

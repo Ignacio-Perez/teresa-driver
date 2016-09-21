@@ -42,12 +42,16 @@
 #include <teresa_driver/Get_DCDC.h>
 #include <teresa_driver/Teresa_leds.h>
 #include <teresa_driver/Diagnostics.h>
+#include <teresa_driver/CmdVelRaw.h>
 #include <teresa_driver/simulated_teresa_robot.hpp>
 #include <teresa_driver/idmind_teresa_robot.hpp>
 #include <teresa_driver/teresa_leds.hpp>
 
 namespace Teresa
 {
+
+
+
 
 /**
  * Enumeration to manage the status of the tilt and height motors
@@ -68,6 +72,8 @@ private:
 	void stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk); // The joystick stalk callback funcrion
 	void stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref);
 	void cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel); // The Command vel callback function
+	void cmdVelRawReceived(const teresa_driver::CmdVelRaw::ConstPtr& vel_ref); // The raw vel callback function
+
 	bool setDCDC(teresa_driver::Set_DCDC::Request  &req,
 			teresa_driver::Set_DCDC::Response &res); // Set DCDC service
 	bool getDCDC(teresa_driver::Get_DCDC::Request  &req,
@@ -99,6 +105,7 @@ private:
 	// Publishers and subscribers
 	ros::Publisher odom_pub;
 	ros::Subscriber cmd_vel_sub;
+	ros::Subscriber cmd_vel_raw_sub;
 	ros::Subscriber imu_sub;
 	ros::Subscriber stalk_sub;
 	ros::Subscriber stalk_ref_sub;
@@ -121,6 +128,10 @@ private:
 	MotorStatus tiltMotor; // Status of the tilt motor
 	MotorStatus heightMotor; // Status of the height motor
 	Leds *leds; // A little bit of fun
+
+	Calibration calibration; // Calibration parameters
+	
+
 };
 
 inline
@@ -162,6 +173,10 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<int>("height_velocity",height_velocity,20);
 		pn.param<int>("tilt_velocity",tilt_velocity,2);
 		pn.param<std::string>("leds_pattern",leds_pattern,"null");
+		pn.param<double>("A_left",calibration.A_left,210.0);
+		pn.param<double>("B_left",calibration.B_left,8.35);
+		pn.param<double>("A_right",calibration.A_right,210.0);
+		pn.param<double>("B_right",calibration.B_right,8.35);
 		leds = getLedsPattern(leds_pattern,number_of_leds);
 		if (simulation) {
 			using_imu=0;
@@ -169,11 +184,12 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 			teresa = new SimulatedRobot(); 
 		} else {
 			// Using the IdMind robot
-			teresa = new IdMindRobot(board1,board2,initial_dcdc_mask,final_dcdc_mask,number_of_leds,printInfo,printError);
+			teresa = new IdMindRobot(board1,board2,calibration,initial_dcdc_mask,final_dcdc_mask,number_of_leds,printInfo,printError);
 		}
 		// Publishers and subscribers
 		odom_pub = pn.advertise<nav_msgs::Odometry>(odom_frame_id, 5);
 		cmd_vel_sub = n.subscribe<geometry_msgs::Twist>("/cmd_vel",1,&Node::cmdVelReceived,this);
+		cmd_vel_raw_sub = n.subscribe<teresa_driver::CmdVelRaw>("/cmd_vel_raw",1,&Node::cmdVelRawReceived,this);
 		if (using_imu) {
 			imu_sub = n.subscribe<sensor_msgs::Imu>("/imu/data",1,&Node::imuReceived,this);	
 		}
@@ -284,7 +300,7 @@ void Node::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
         teresa->setTilt((int)std::round(stalk_ref->head_tilt * 57.2958)); // From radians to degrees
 }
 
-// CmdVel callback funcrion
+// CmdVel callback function
 inline
 void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 { 
@@ -293,6 +309,14 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 		teresa->setVelocity( cmd_vel->linear.x,cmd_vel->angular.z);
 	}
 }
+
+// CmdVelRaw callback function
+inline
+void Node::cmdVelRawReceived(const teresa_driver::CmdVelRaw::ConstPtr& vel_ref)
+{
+	teresa->setVelocityRaw(vel_ref->left_wheel, vel_ref->right_wheel);
+}
+
 
 // Set DCDC service
 inline

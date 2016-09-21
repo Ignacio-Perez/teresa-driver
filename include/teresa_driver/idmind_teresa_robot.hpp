@@ -36,6 +36,15 @@
 namespace Teresa
 {
 
+struct Calibration
+{
+	double A_left;
+	double B_left;
+	double A_right;
+	double B_right;
+};
+
+
 #define WRITTING_TRIES                  5
 
 // BOARD1 COMMANDS
@@ -134,6 +143,7 @@ public:
 	 *
 	 * @param board1 device of the board1 (i.e. /dev/ttyUSB0)
 	 * @param board2 device of the board2 (i.e. /dev/ttyUSB1)
+	 * @param calibration the wheel calibration parameter
 	 * @param initial_dcdc_mask initial mask for DCDC to be set now (see IdMind documentation)
 	 * @param final_dcdc_mask final mask for DCDC, to be set in the destructor
 	 * @param printInfo function to print information 
@@ -141,6 +151,7 @@ public:
 	 */
 	IdMindRobot(const std::string& board1,
 			const std::string& board2,
+			const Calibration& calibration,
                         unsigned char initial_dcdc_mask,
 			unsigned char final_dcdc_mask,
 			unsigned char number_of_leds,
@@ -150,6 +161,7 @@ public:
 	virtual ~IdMindRobot();
 	// Implementation of inherited virtual functions (robot interface)
 	virtual bool setVelocity(double linear, double angular);
+	virtual bool setVelocityRaw(int16_t leftWheelRef, int16_t rightWheelRef);
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
 	virtual bool setHeightVelocity(int velocity);
@@ -189,6 +201,7 @@ private:
 
 	IdMindBoard board1; // Sensors board
 	IdMindBoard board2; // Motors board
+	Calibration calibration;
 	unsigned char number_of_leds; // Number of configured leds
 
 	void (*printInfo)(const std::string& message); // Function to print information
@@ -339,6 +352,7 @@ bool IdMindBoard::communicate(int command_size, int response_size)
 
 inline
 IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
+				const Calibration& calibration,
 				unsigned char initial_dcdc_mask,
 				unsigned char final_dcdc_mask,
 				unsigned char number_of_leds,
@@ -346,6 +360,7 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
 				void (*printError)(const std::string& message))
 : board1(board1,"board1",printInfo,printError),
   board2(board2,"board2",printInfo,printError),
+  calibration(calibration),
   number_of_leds(number_of_leds),
   printInfo(printInfo),
   printError(printError),
@@ -522,20 +537,8 @@ bool IdMindRobot::calibrate(bool calibrate_tilt_system, bool calibrate_height_sy
 }
 
 inline
-bool IdMindRobot::setVelocity(double linear, double angular)
+bool IdMindRobot::setVelocityRaw(int16_t v_left, int16_t v_right)
 {
-	linear=saturateLinearVelocity(linear);
-	angular=saturateAngularVelocity(angular);
-	double left_wheel_velocity = saturateLinearVelocity(linear - ROBOT_RADIUS_M*angular);
-	double right_wheel_velocity = saturateLinearVelocity(linear + ROBOT_RADIUS_M*angular);
-	int16_t v_left=0;
-	int16_t v_right=0;
-	if (left_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || left_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
-		v_left = -(int16_t)std::round(left_wheel_velocity * 210.0 + 8.35);
-	}
-	if (right_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || right_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
-		v_right = (int16_t)std::round(right_wheel_velocity * 210.0 + 8.35);
-	}
 	board2.command[0] = SET_MOTOR_VELOCITY;
 	board2.command[1] = (unsigned char)(v_left >> 8);
 	board2.command[2] = (unsigned char)(v_left & 0xFF);	
@@ -546,6 +549,25 @@ bool IdMindRobot::setVelocity(double linear, double angular)
 		return false;
 	}
 	return true;
+}
+
+
+inline
+bool IdMindRobot::setVelocity(double linear, double angular)
+{
+	linear=saturateLinearVelocity(linear);
+	angular=saturateAngularVelocity(angular);
+	double left_wheel_velocity = saturateLinearVelocity(linear - ROBOT_RADIUS_M*angular);
+	double right_wheel_velocity = saturateLinearVelocity(linear + ROBOT_RADIUS_M*angular);
+	int16_t v_left=0;
+	int16_t v_right=0;
+	if (left_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || left_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
+		v_left = -(int16_t)std::round(left_wheel_velocity * calibration.A_left + calibration.B_left);
+	}
+	if (right_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || right_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
+		v_right = (int16_t)std::round(right_wheel_velocity * calibration.A_right + calibration.B_right);
+	}
+	return setVelocityRaw(v_left,v_right);
 }
 
 inline

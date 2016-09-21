@@ -42,6 +42,7 @@ public:
 	SimulatedRobot();
 	virtual ~SimulatedRobot() {}
 	virtual bool setVelocity(double linear, double angular);
+	virtual bool setVelocityRaw(int16_t leftWheelRef, int16_t rightWheelRef) {return true;}
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
 	virtual bool setHeightVelocity(int velocity) {return true;}
