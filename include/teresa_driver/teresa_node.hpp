@@ -172,12 +172,15 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<double>("freq",freq,20);
 		pn.param<int>("height_velocity",height_velocity,20);
 		pn.param<int>("tilt_velocity",tilt_velocity,2);
+		pn.param<bool>("inverse_left_motor",calibration.inverse_left_motor,true);
+		pn.param<bool>("inverse_right_motor",calibration.inverse_right_motor,false);
 		pn.param<std::string>("leds_pattern",leds_pattern,"null");
 		pn.param<double>("A_left",calibration.A_left,210.0);
 		pn.param<double>("B_left",calibration.B_left,8.35);
 		pn.param<double>("A_right",calibration.A_right,210.0);
 		pn.param<double>("B_right",calibration.B_right,8.35);
 		leds = getLedsPattern(leds_pattern,number_of_leds);
+		
 		if (simulation) {
 			using_imu=0;
 			// Using a simulated robot, for debugging and testing

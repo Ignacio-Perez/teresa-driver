@@ -42,6 +42,8 @@ struct Calibration
 	double B_left;
 	double A_right;
 	double B_right;
+	bool inverse_left_motor;
+	bool inverse_right_motor;
 };
 
 
@@ -559,11 +561,13 @@ bool IdMindRobot::setVelocity(double linear, double angular)
 	int16_t v_left=0;
 	int16_t v_right=0;
 	if (left_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || left_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
-		v_left = -(int16_t)std::round(fabs(left_wheel_velocity) * calibration.A_left + calibration.B_left);
+		v_left = (int16_t)std::round(fabs(left_wheel_velocity) * calibration.A_left + calibration.B_left);
+		if (calibration.inverse_left_motor) v_left = -v_left;
 		if (left_wheel_velocity<0) v_left *= -1; 
 	}
 	if (right_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || right_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
 		v_right = (int16_t)std::round(fabs(right_wheel_velocity) * calibration.A_right + calibration.B_right);
+		if (calibration.inverse_right_motor) v_right = -v_right;
 		if (right_wheel_velocity<0) v_right *= -1; 
 	}
 	return setVelocityRaw(v_left,v_right);
