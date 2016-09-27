@@ -104,30 +104,30 @@ public:
 	 */ 
 	virtual bool getIMD(double& imdl, double& imdr) = 0;
 	/**
-	 * Set the height velocity in mm/s 
+	 * Set the height velocity 
 	 *
-	 * @param[in] velocity in mm/s
+	 * @param[in] velocity in [0,40] range
 	 * @return true if success, false otherwise
 	 */
 	virtual bool setHeightVelocity(int velocity) = 0;
 	/**
-	 * Set the tilt velocity in degrees/s 
+	 * Set the tilt velocity 
 	 *
-	 * @param[in] velocity in degrees/s
+	 * @param[in] velocity in [2,8] range
 	 * @return true if success, false otherwise
 	 */
 	virtual bool setTiltVelocity(int velocity) = 0;
 	/**
 	 * Set the height
 	 *
-	 * @param[in] height in millimeters [1210 to 1425]
+	 * @param[in] height in millimeters [1260 to 1425]
          * @return true if success, false otherwise
 	 */
 	virtual bool setHeight(int height) = 0;
 	/**
 	 * Set the tilt angle
 	 *
-	 * @param[in] tilt angle in degrees [-37 to 180]
+	 * @param[in] tilt angle in degrees [-37 to 37]
          * @return true if success, false otherwise
 	 */
 	virtual bool setTilt(int tilt) = 0;

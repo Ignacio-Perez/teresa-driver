@@ -485,11 +485,11 @@ bool IdMindRobot::enableHeightMotor(bool enable)
 inline
 bool IdMindRobot::setHeightVelocity(int velocity)
 {
-	if (velocity<0 || velocity>30) {
-		printError("Invalid height velocity");
+	if (velocity<0 || velocity>40) {
+		printError("Invalid height velocity. It should be in [0,40]");
 		return false;
 	}
-	uint16_t v_ref = velocity==0?0:(uint16_t)std::round(0.75 * (double)velocity); 
+	uint16_t v_ref = (uint16_t)velocity; 
 	board2.command[0] = SET_HEIGHT_VELOCITY;
 	board2.command[1] = (unsigned char)(v_ref >> 8);
 	board2.command[2] = (unsigned char)(v_ref & 0xFF);
@@ -503,7 +503,7 @@ bool IdMindRobot::setHeightVelocity(int velocity)
 inline
 bool IdMindRobot::setTiltVelocity(int velocity)
 {
-	if (velocity<0 || velocity>8) {
+	if (velocity<2 || velocity>8) {
 		printError("Invalid tilt velocity. It should be in [0,8]");
 		return false;
 	}
