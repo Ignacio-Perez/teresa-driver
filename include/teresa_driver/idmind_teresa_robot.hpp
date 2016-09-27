@@ -225,6 +225,7 @@ IdMindBoard::IdMindBoard(const std::string& device, const std::string& name,
 inline
 IdMindBoard::~IdMindBoard()
 {
+	flush();
 	board.close();
 }
 
@@ -374,10 +375,6 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
 	if (!board1_open || 
 		!board2_open || 
 		!enableDCDC(initial_dcdc_mask) || 
-		!setFans(true) ||
-		!enableTiltMotor(true) ||
-		!enableHeightMotor(true) ||
-		!calibrate(true,true) ||
 		!setNumberOfLeds(number_of_leds)) {
 		throw ("Teresa initialization aborted");
 	}

@@ -186,6 +186,8 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 			// Using the IdMind robot
 			teresa = new IdMindRobot(board1,board2,calibration,initial_dcdc_mask,final_dcdc_mask,number_of_leds,printInfo,printError);
 		}
+		teresa->setHeightVelocity(height_velocity);
+		teresa->setTiltVelocity(tilt_velocity);
 		// Publishers and subscribers
 		odom_pub = pn.advertise<nav_msgs::Odometry>(odom_frame_id, 5);
 		cmd_vel_sub = n.subscribe<geometry_msgs::Twist>("/cmd_vel",1,&Node::cmdVelReceived,this);
@@ -258,35 +260,37 @@ inline
 void Node::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
 { 
 	if (stalk->head_up && heightMotor!=MOTOR_UP) { // height motor UP
-		teresa->setHeightVelocity(height_velocity);
 		teresa->setHeight(MAX_HEIGHT_MM);
 		heightMotor = MOTOR_UP;
 	}
 	else // height motor DOWN
 	if (stalk->head_down && heightMotor!=MOTOR_DOWN) {
-		teresa->setHeightVelocity(height_velocity);
 		teresa->setHeight(MIN_HEIGHT_MM);
 		heightMotor = MOTOR_DOWN;
 	}
 	else if (heightMotor!=MOTOR_STOP){ // height motor STOP
-		teresa->setHeightVelocity(0);
-		heightMotor = MOTOR_STOP;
+		int height_in_millimeters=0;
+		if (teresa->getHeight(height_in_millimeters) &&
+			teresa->setHeight(height_in_millimeters)) {
+			heightMotor = MOTOR_STOP;
+		}
 	}
 	
 	if (stalk->tilt_up && tiltMotor!=MOTOR_UP) { //tilt motor UP
-		teresa->setTiltVelocity(tilt_velocity);
 		teresa->setTilt(MAX_TILT_ANGLE_DEGREES);
 		tiltMotor = MOTOR_UP;
 	}
 	else
 	if (stalk->tilt_down && tiltMotor!=MOTOR_DOWN) { // tilt motor DOWN
-		teresa->setTiltVelocity(tilt_velocity);
 		teresa->setTilt(MIN_TILT_ANGLE_DEGREES);
 		tiltMotor = MOTOR_DOWN;
 	}
 	else if (tiltMotor!=MOTOR_STOP){ // tilt motor STOP
-		teresa->setTiltVelocity(0);
-		tiltMotor = MOTOR_STOP;
+		int tilt_in_degrees=0;
+		if (teresa->getTilt(tilt_in_degrees) &&
+			teresa->setTilt(tilt_in_degrees)) {
+			tiltMotor = MOTOR_STOP;
+		}
 	}
 }
 
@@ -294,8 +298,6 @@ void Node::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
 inline
 void Node::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
 { 
-	teresa->setHeightVelocity(height_velocity);
-	teresa->setTiltVelocity(tilt_velocity);
 	teresa->setHeight((int)std::round(stalk_ref->head_height*1000)); // From meters to millimeters
         teresa->setTilt((int)std::round(stalk_ref->head_tilt * 57.2958)); // From radians to degrees
 }
