@@ -16,8 +16,8 @@
    <node pkg="tf" type="static_transform_publisher" name="xtion_people_rgb_tf" args="0.0 0.0 0.0 3.141592653589793 0.0 0.0 /xtionPeople_depth_optical_frame /xtionPeople_rgb_optical_frame 100" /> <!--x:-0.27 y:0.09-->
 
    <!-- xtion navigation -->
-   <node pkg="tf" type="static_transform_publisher" name="xtion_nav_tf" args="0.05 0.03 -0.23 0.0 0.84 0.0 /stalk_head /xtionNav_link 100" />
-
+   <node pkg="tf" type="static_transform_publisher" name="xtion_nav_tf" args="0.10 0.05 -0.23 0.0 0.84 0.0 /stalk_head /xtionNav_link 100" />
+  <!-- 0.05 0.03 -0.23 -->
    
 
 </launch>
