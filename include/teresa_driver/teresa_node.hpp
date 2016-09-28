@@ -324,7 +324,7 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 	if (!imu_error) { // If IMU error, do not move!
 		double cmdLinVel = cmd_vel->linear.x;
 		double cmdAngVel = cmd_vel->angular.z;
-		if (fabs(cmdLinVel) < 0.05) {
+		/*if (fabs(cmdLinVel) < 0.05) {
 			cmdLinVel = 0;
 		} else if (fabs(cmdLinVel) < 0.15 && lin_vel<0.05 && ang_vel<0.05) {
 			cmdLinVel = cmdLinVel>0 ? 0.15 : -0.15;
@@ -334,7 +334,7 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 			cmdAngVel = 0;
 		} else if (fabs(cmdAngVel) < 0.3 && lin_vel<0.05 && ang_vel<0.05) {
 			cmdAngVel = cmdAngVel>0 ? 0.3 : -0.3;
-		}
+		}*/
 		
 		teresa->setVelocity( cmdLinVel, cmdAngVel);
 	}
