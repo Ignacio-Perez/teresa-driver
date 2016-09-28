@@ -85,6 +85,7 @@ private:
 	static void printError(const std::string& message){ROS_ERROR("%s",message.c_str());} // Print Error function
 	
 	ros::NodeHandle& n;
+	double lin_vel; // Linear velocity
 	double ang_vel; // Angular velocity
 	bool imu_error; // IMU error?
 	double yaw; // Yaw angle
@@ -130,6 +131,11 @@ private:
 	Leds *leds; // A little bit of fun
 
 	Calibration calibration; // Calibration parameters
+
+	//double lin_vel_dead_zone;
+	//double ang_vel_dead_zone;
+	//double lin_vel_zero_threshold;
+	//double ang_vel_zero_threshold;
 	
 
 };
@@ -137,6 +143,7 @@ private:
 inline
 Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 : n(n), 
+  lin_vel(0.0),
   ang_vel(0.0),
   imu_error(false),
   yaw(0.0),
@@ -179,6 +186,10 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<double>("B_left",calibration.B_left,8.35);
 		pn.param<double>("A_right",calibration.A_right,210.0);
 		pn.param<double>("B_right",calibration.B_right,8.35);
+		//pn.param<double>("lin_vel_dead_zone",lin_vel_dead_zone,0.15);
+		//pn.param<double>("ang_vel_dead_zone",ang_vel_dead_zone,0.3);
+		//pn.param<double>("lin_vel_zero_threshold",lin_vel_zero_threshold,0.05);
+		//pn.param<double>("ang_vel_zero_threshold",ang_vel_zero_threshold,0.05);
 		leds = getLedsPattern(leds_pattern,number_of_leds);
 		
 		if (simulation) {
@@ -311,7 +322,21 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 { 
 	cmd_vel_time = ros::Time::now(); // Get the time
 	if (!imu_error) { // If IMU error, do not move!
-		teresa->setVelocity( cmd_vel->linear.x,cmd_vel->angular.z);
+		double cmdLinVel = cmd_vel->linear.x;
+		double cmdAngVel = cmd_vel->angular.z;
+		if (fabs(cmdLinVel) < 0.05) {
+			cmdLinVel = 0;
+		} else if (fabs(cmdLinVel) < 0.15 && lin_vel<0.05 && ang_vel<0.05) {
+			cmdLinVel = cmdLinVel>0 ? 0.15 : -0.15;
+		}
+
+		if (fabs(cmdAngVel) < 0.05) {
+			cmdAngVel = 0;
+		} else if (fabs(cmdAngVel) < 0.3 && lin_vel<0.05 && ang_vel<0.05) {
+			cmdAngVel = cmdAngVel>0 ? 0.3 : -0.3;
+		}
+		
+		teresa->setVelocity( cmdLinVel, cmdAngVel);
 	}
 }
 
@@ -369,7 +394,7 @@ bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 inline
 void Node::loop()
 {
-	double lin_vel=0.0;
+	
 	double pos_x=0.0;
 	double pos_y=0.0;
 	ros::Time current_time,last_time;
