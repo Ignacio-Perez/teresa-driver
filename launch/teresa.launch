@@ -15,7 +15,7 @@
 
    <node pkg="teresa_driver" type="teresa_node" name="teresa_node" output="screen" respawn="false">
    <param name="board1" type="str" value="/dev/serial/by-id/usb-FTDI_MM232R_USB_MODULE_board1-if00-port0"/>
-   <param name="board2" type="str" value="/dev/serial/by-id/usb-FTDI_MM232R_USB_MODULE_FT94LE8L-if00-port0"/>
+   <param name="board2" type="str" value="/dev/serial/by-id/usb-FTDI_MM232R_USB_MODULE_board2-if00-port0"/>
    <param name="base_frame_id" type="str" value="/base_link"/>	  
    <param name="odom_frame_id" type="str" value="/odom"/>  
    <param name="head_frame_id" type="str" value="/teresa_head"/>
@@ -33,8 +33,8 @@
    <param name="initial_dcdc_mask" type="int" value="255"/> <!--243 lasers off-->  
    <param name="final_dcdc_mask" type="int" value="255"/>  <!--243 lasers off -->
    <param name="height_velocity" type="int" value="20"/>
-   <param name="tilt_velocity" type="int" value="2"/>
-   <param name="leds_pattern" type="str" value="knight_rider"/>	
+   <param name="tilt_velocity" type="int" value="3"/>
+   <!--<param name="leds_pattern" type="str" value="knight_rider"/>	-->
    </node>
 
    <!-- joy node -->
@@ -44,9 +44,10 @@
   
     <!-- teresa joystick driver -->
    <node pkg="teresa_driver" type="teresa_teleop_joy" name="teleop" output="screen" respawn="false">
-	<!--<remap from="cmd_vel" to="teresa/cmd_vel"/>-->
    </node>
 
 
+   <!-- Xtions -->
+   <!--<include file="$(find teresa_driver)/launch/xtions.launch" />-->
 
 </launch>
