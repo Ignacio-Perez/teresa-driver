@@ -43,7 +43,9 @@
    </node>
   
     <!-- teresa joystick driver -->
-   <node pkg="teresa_driver" type="teresa_teleop_joy" name="teleop" output="screen" respawn="false">
+   <node pkg="teresa_driver" type="teresa_teleop_joy" name="teleop" output="screen" respawn="false"> 
+		<param name="max_linear_velocity" type="double" value="0.4" />	
+		<param name="max_angular_velocity" type="double" value="0.8" />
    </node>
 
 
