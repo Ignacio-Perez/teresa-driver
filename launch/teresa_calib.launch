@@ -13,7 +13,7 @@
 
   <!-- teresa driver -->  
 
-   <node pkg="teresa_driver" type="teresa_node" name="teresa_node" output="screen" respawn="false">
+   <node pkg="teresa_driver" type="teresa_node_calib" name="teresa_node_calib" output="screen" respawn="false">
    <param name="board1" type="str" value="/dev/serial/by-id/usb-FTDI_MM232R_USB_MODULE_board1-if00-port0"/>
    <param name="board2" type="str" value="/dev/serial/by-id/usb-FTDI_MM232R_USB_MODULE_board2-if00-port0"/>
    <param name="base_frame_id" type="str" value="/base_link"/>	  
@@ -35,11 +35,6 @@
    <param name="height_velocity" type="int" value="20"/>
    <param name="tilt_velocity" type="int" value="3"/>
    <!--<param name="leds_pattern" type="str" value="knight_rider"/>	-->
-   <param name="A_left" type="double" value="89.4" /> 	<!--210.0 upo robot-->
-   <param name="B_left" type="double" value="-0.394" /> <!--8.35 upo robot-->
-   <param name="A_right" type="double" value="88.1" />	<!--210.0 upo robot-->
-   <param name="B_right" type="double" value="0.343" />	<!--8.35 upo robot-->
-   <param name="use_upo_calib" type="bool" value="true" />
    </node>
 
    <!-- joy node -->
@@ -49,8 +44,8 @@
   
     <!-- teresa joystick driver -->
    <node pkg="teresa_driver" type="teresa_teleop_joy" name="teleop" output="screen" respawn="false"> 
-		<param name="max_linear_velocity" type="double" value="0.4" />	
-		<param name="max_angular_velocity" type="double" value="0.8" />
+		<!--param name="max_linear_velocity" type="double" value="0.4" />	
+		<param name="max_angular_velocity" type="double" value="0.8" /-->
    </node>
 
 

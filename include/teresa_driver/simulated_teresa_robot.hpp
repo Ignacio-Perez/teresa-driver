@@ -42,6 +42,7 @@ public:
 	SimulatedRobot();
 	virtual ~SimulatedRobot() {}
 	virtual bool setVelocity(double linear, double angular);
+	virtual bool setVelocity2(double linear, double angular);
 	virtual bool setVelocityRaw(int16_t leftWheelRef, int16_t rightWheelRef) {return true;}
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
@@ -166,6 +167,12 @@ bool SimulatedRobot::setVelocity(double linear, double angular)
 			std::abs(right_wheel_velocity)<=LINEAR_VELOCITY_ZERO_THRESHOLD;
 	return true;
 }	
+
+inline
+bool SimulatedRobot::setVelocity2(double linear, double angular)
+{
+	return setVelocity(linear, angular);
+}
 
 inline
 bool SimulatedRobot::isStopped()

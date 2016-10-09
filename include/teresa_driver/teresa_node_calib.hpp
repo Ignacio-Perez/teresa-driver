@@ -22,8 +22,8 @@
 /** http://www.opensource.org/licenses/BSD-3-Clause                    */
 /**                                                                    */
 /***********************************************************************/
-#ifndef _TERESA_NODE_HPP_
-#define _TERESA_NODE_HPP_
+#ifndef _TERESA_NODE_CALIB_HPP_
+#define _TERESA_NODE_CALIB_HPP_
 
 #include <ros/ros.h>
 #include <string>
@@ -43,9 +43,13 @@
 #include <teresa_driver/Teresa_leds.h>
 #include <teresa_driver/Diagnostics.h>
 #include <teresa_driver/CmdVelRaw.h>
+#include <teresa_driver/WheelVels.h>
 #include <teresa_driver/simulated_teresa_robot.hpp>
 #include <teresa_driver/idmind_teresa_robot.hpp>
 #include <teresa_driver/teresa_leds.hpp>
+
+//Boost
+#include <boost/thread.hpp>  // Mutex
 
 namespace Teresa
 {
@@ -61,18 +65,18 @@ enum MotorStatus {MOTOR_UP, MOTOR_DOWN, MOTOR_STOP};
 /**
  * The ROS node class
  */
-class Node
+class NodeCalib
 {
 public:
-	Node(ros::NodeHandle& n, ros::NodeHandle& pn);
-	~Node();
+	NodeCalib(ros::NodeHandle& n, ros::NodeHandle& pn);
+	~NodeCalib();
 private:
 	void loop(); // The main loop
 	void imuReceived(const sensor_msgs::Imu::ConstPtr& imu); // The IMU callback function
 	void stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk); // The joystick stalk callback funcrion
 	void stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref);
 	void cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel); // The Command vel callback function
-	void cmdVelRawReceived(const teresa_driver::CmdVelRaw::ConstPtr& vel_ref); // The raw vel callback function
+	//void cmdVelRawReceived(const teresa_driver::CmdVelRaw::ConstPtr& vel_ref); // The raw vel callback function
 
 	bool setDCDC(teresa_driver::Set_DCDC::Request  &req,
 			teresa_driver::Set_DCDC::Response &res); // Set DCDC service
@@ -98,7 +102,6 @@ private:
 	int height_velocity; // The configured heght motor velocity in mm/s
 	int tilt_velocity; // The configured tilt motor velocity in degrees/s
 	double freq; // Main loop frequency;
-	bool use_upo_calib;
 	// Frame IDs
 	std::string base_frame_id;
 	std::string odom_frame_id;
@@ -107,7 +110,7 @@ private:
 	// Publishers and subscribers
 	ros::Publisher odom_pub;
 	ros::Subscriber cmd_vel_sub;
-	ros::Subscriber cmd_vel_raw_sub;
+	//ros::Subscriber cmd_vel_raw_sub;
 	ros::Subscriber imu_sub;
 	ros::Subscriber stalk_sub;
 	ros::Subscriber stalk_ref_sub;
@@ -115,7 +118,15 @@ private:
 	ros::Publisher batteries_pub;
 	ros::Publisher volume_pub;
 	ros::Publisher diagnostics_pub;
-	ros::Publisher temperature_pub;	
+	ros::Publisher temperature_pub;
+
+	//For calibration
+	teresa_driver::CmdVelRaw cmdVel2MotorUnits(geometry_msgs::Twist cmd);
+	ros::Publisher wheels_vel_pub;
+	ros::Publisher wheels_motor_pub;
+	teresa_driver::CmdVelRaw motor_units;
+	boost::mutex motor_mutex;
+	
 	// Services
 	ros::ServiceServer set_dcdc_service;
 	ros::ServiceServer get_dcdc_service;
@@ -142,7 +153,7 @@ private:
 };
 
 inline
-Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
+NodeCalib::NodeCalib(ros::NodeHandle& n, ros::NodeHandle& pn)
 : n(n), 
   lin_vel(0.0),
   ang_vel(0.0),
@@ -187,7 +198,6 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<double>("B_left",calibration.B_left,8.35);
 		pn.param<double>("A_right",calibration.A_right,210.0);
 		pn.param<double>("B_right",calibration.B_right,8.35);
-		pn.param<bool>("use_upo_calib",use_upo_calib, true);
 		//pn.param<double>("lin_vel_dead_zone",lin_vel_dead_zone,0.15);
 		//pn.param<double>("ang_vel_dead_zone",ang_vel_dead_zone,0.3);
 		//pn.param<double>("lin_vel_zero_threshold",lin_vel_zero_threshold,0.05);
@@ -206,13 +216,13 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		teresa->setTiltVelocity(tilt_velocity);
 		// Publishers and subscribers
 		odom_pub = pn.advertise<nav_msgs::Odometry>(odom_frame_id, 5);
-		cmd_vel_sub = n.subscribe<geometry_msgs::Twist>("/cmd_vel",1,&Node::cmdVelReceived,this);
-		cmd_vel_raw_sub = n.subscribe<teresa_driver::CmdVelRaw>("/cmd_vel_raw",1,&Node::cmdVelRawReceived,this);
+		cmd_vel_sub = n.subscribe<geometry_msgs::Twist>("/cmd_vel",1,&NodeCalib::cmdVelReceived,this);
+		//cmd_vel_raw_sub = n.subscribe<teresa_driver::CmdVelRaw>("/cmd_vel_raw",1,&Node::cmdVelRawReceived,this);
 		if (using_imu) {
-			imu_sub = n.subscribe<sensor_msgs::Imu>("/imu/data",1,&Node::imuReceived,this);	
+			imu_sub = n.subscribe<sensor_msgs::Imu>("/imu/data",1,&NodeCalib::imuReceived,this);	
 		}
-		stalk_sub = n.subscribe<teresa_driver::Stalk>("/stalk",1,&Node::stalkReceived,this);
-		stalk_ref_sub =n.subscribe<teresa_driver::StalkRef>("/stalk_ref",1,&Node::stalkRefReceived,this);
+		stalk_sub = n.subscribe<teresa_driver::Stalk>("/stalk",1,&NodeCalib::stalkReceived,this);
+		stalk_ref_sub =n.subscribe<teresa_driver::StalkRef>("/stalk_ref",1,&NodeCalib::stalkRefReceived,this);
 		if (publish_buttons) {
 			buttons_pub = pn.advertise<teresa_driver::Buttons>("/arcade_buttons",5);
 		}
@@ -226,10 +236,15 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 			diagnostics_pub = pn.advertise<teresa_driver::Diagnostics>("/teresa_diagnostics",5);
 		}
 		batteries_pub = pn.advertise<teresa_driver::Batteries>("/batteries",5);	
+
+		//For calibration
+		wheels_motor_pub = pn.advertise<teresa_driver::CmdVelRaw>("/wheel_motor_units", 5);
+		wheels_vel_pub = pn.advertise<teresa_driver::WheelVels>("/wheel_vels", 5);
+
 		// Services
-		set_dcdc_service = n.advertiseService("set_teresa_dcdc", &Node::setDCDC,this);
-		get_dcdc_service = n.advertiseService("get_teresa_dcdc", &Node::getDCDC,this);				
-		leds_service = n.advertiseService("teresa_leds", &Node::teresaLeds,this);
+		set_dcdc_service = n.advertiseService("set_teresa_dcdc", &NodeCalib::setDCDC,this);
+		get_dcdc_service = n.advertiseService("get_teresa_dcdc", &NodeCalib::getDCDC,this);				
+		leds_service = n.advertiseService("teresa_leds", &NodeCalib::teresaLeds,this);
 		// Run the main loop
 		loop();
 	} catch (const char* msg) {
@@ -239,7 +254,7 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 }
 
 inline
-Node::~Node()
+NodeCalib::~NodeCalib()
 {
 	delete teresa;
 	delete leds;
@@ -247,7 +262,7 @@ Node::~Node()
 
 // IMU callback function
 inline
-void Node::imuReceived(const sensor_msgs::Imu::ConstPtr& imu)
+void NodeCalib::imuReceived(const sensor_msgs::Imu::ConstPtr& imu)
 {
 	imu_time = ros::Time::now();
 	// The first time we get data from the IMU
@@ -273,7 +288,7 @@ void Node::imuReceived(const sensor_msgs::Imu::ConstPtr& imu)
 
 // Stalk callback function (command from joystick)
 inline
-void Node::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
+void NodeCalib::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
 { 
 	if (stalk->head_up && heightMotor!=MOTOR_UP) { // height motor UP
 		teresa->setHeight(MAX_HEIGHT_MM);
@@ -312,7 +327,7 @@ void Node::stalkReceived(const teresa_driver::Stalk::ConstPtr& stalk)
 
 // StalkRef callback function
 inline
-void Node::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
+void NodeCalib::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
 { 
 	teresa->setHeight((int)std::round(stalk_ref->head_height*1000)); // From meters to millimeters
         teresa->setTilt((int)std::round(stalk_ref->head_tilt * 57.2958)); // From radians to degrees
@@ -320,7 +335,7 @@ void Node::stalkRefReceived(const teresa_driver::StalkRef::ConstPtr& stalk_ref)
 
 // CmdVel callback function
 inline
-void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
+void NodeCalib::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 { 
 	cmd_vel_time = ros::Time::now(); // Get the time
 	if (!imu_error) { // If IMU error, do not move!
@@ -337,24 +352,50 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 		} else if (fabs(cmdAngVel) < 0.3 && lin_vel<0.05 && ang_vel<0.05) {
 			cmdAngVel = cmdAngVel>0 ? 0.3 : -0.3;
 		}*/
-		if(use_upo_calib)
-			teresa->setVelocity2( cmdLinVel, cmdAngVel);
-		else
-			teresa->setVelocity( cmdLinVel, cmdAngVel);
+		
+		teresa->setVelocity( cmdLinVel, cmdAngVel);
 	}
+
+	motor_mutex.lock();
+	motor_units = cmdVel2MotorUnits(*cmd_vel);
+	motor_mutex.unlock();
 }
 
-// CmdVelRaw callback function
 inline
+teresa_driver::CmdVelRaw NodeCalib::cmdVel2MotorUnits(geometry_msgs::Twist cmd)
+{
+	double lv = cmd.linear.x;
+	double av = cmd.angular.z;
+	double left_wheel_vel = lv - ROBOT_RADIUS_M * av;
+	double right_wheel_vel = lv + ROBOT_RADIUS_M * av;
+	int16_t v_left=0;
+	int16_t v_right=0;
+	v_left = (int16_t)std::round(fabs(left_wheel_vel) * calibration.A_left + calibration.B_left);
+	//if (calibration.inverse_left_motor) v_left = -v_left;
+	if (left_wheel_vel<0) v_left *= -1; 
+	
+	v_right = (int16_t)std::round(fabs(right_wheel_vel) * calibration.A_right + calibration.B_right);
+	//if (calibration.inverse_right_motor) v_right = -v_right;
+	if (right_wheel_vel<0) v_right *= -1;
+
+	teresa_driver::CmdVelRaw units;
+	units.left_wheel = v_left;
+	units.right_wheel = v_right;
+	return units;  
+}
+
+
+// CmdVelRaw callback function
+/*inline
 void Node::cmdVelRawReceived(const teresa_driver::CmdVelRaw::ConstPtr& vel_ref)
 {
 	teresa->setVelocityRaw(vel_ref->left_wheel, vel_ref->right_wheel);
-}
+}*/
 
 
 // Set DCDC service
 inline
-bool Node::setDCDC(teresa_driver::Set_DCDC::Request  &req,
+bool NodeCalib::setDCDC(teresa_driver::Set_DCDC::Request  &req,
 			teresa_driver::Set_DCDC::Response &res)
 {
 	if (req.mode>2) {
@@ -376,7 +417,7 @@ bool Node::setDCDC(teresa_driver::Set_DCDC::Request  &req,
 
 // Get DCDC service
 inline
-bool Node::getDCDC(teresa_driver::Get_DCDC::Request  &req,
+bool NodeCalib::getDCDC(teresa_driver::Get_DCDC::Request  &req,
 			teresa_driver::Get_DCDC::Response &res)
 { 
 	res.mask = 0;
@@ -387,7 +428,7 @@ bool Node::getDCDC(teresa_driver::Get_DCDC::Request  &req,
 
 // Leds service
 inline
-bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
+bool NodeCalib::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 			teresa_driver::Teresa_leds::Response &res)
 { 
 	res.success = teresa->setLeds(req.rgb_values);
@@ -396,7 +437,7 @@ bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 
 // Main Loop
 inline
-void Node::loop()
+void NodeCalib::loop()
 {
 	
 	double pos_x=0.0;
@@ -456,7 +497,22 @@ void Node::loop()
 			lin_vel = imd / dt;
 			pos_x += imd*std::cos(yaw + ang_vel*dt/2);
 			pos_y += imd*std::sin(yaw + ang_vel*dt/2);
-		} 
+		}
+
+
+		//Publish topics for calibration
+		motor_mutex.lock();
+		teresa_driver::CmdVelRaw munits = motor_units;
+		motor_mutex.unlock();
+		munits.header.stamp = current_time;
+		wheels_motor_pub.publish(munits);
+		teresa_driver::WheelVels wvels;
+		wvels.header.stamp = current_time;
+		wvels.left_wheel_vel = imdl/dt;
+		wvels.right_wheel_vel = imdr/dt;
+		wheels_vel_pub.publish(wvels);
+
+ 
 		// ******************************************************************************************
 		//first, we'll publish the transforms over tf
 		geometry_msgs::TransformStamped odom_trans;
