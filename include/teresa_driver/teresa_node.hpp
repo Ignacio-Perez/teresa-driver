@@ -89,6 +89,7 @@ private:
 	double ang_vel; // Angular velocity
 	bool imu_error; // IMU error?
 	double yaw; // Yaw angle
+	double inc_yaw; // Yaw increment
 	bool imu_first_time; // Is it the first time we get IMU data?
 	int using_imu; // Are we using an IMU?
 	int publish_temperature; // Are we going to publish the temperatures? (1 = yes, 0 = no)
@@ -148,6 +149,7 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
   ang_vel(0.0),
   imu_error(false),
   yaw(0.0),
+  inc_yaw(0.0),
   imu_first_time(true),
   teresa(NULL),
   tiltMotor(MOTOR_STOP),
@@ -268,7 +270,7 @@ void Node::imuReceived(const sensor_msgs::Imu::ConstPtr& imu)
 	// Get angular velocity from IMU
 	ang_vel = imu->angular_velocity.z;
 	// Increment yaw angle
-	yaw += ang_vel * duration;
+	inc_yaw += ang_vel * duration;
 }
 
 // Stalk callback function (command from joystick)
@@ -448,7 +450,7 @@ void Node::loop()
 			double vr = imdr/dt;
 			double vl = imdl/dt;
 			ang_vel = (vr-vl)/ROBOT_DIAMETER_M;
-			yaw += ang_vel*dt;
+			inc_yaw += ang_vel*dt;
 		}
 		last_time = current_time;
 		if (!first_time) {
@@ -456,6 +458,8 @@ void Node::loop()
 			lin_vel = imd / dt;
 			pos_x += imd*std::cos(yaw + ang_vel*dt/2);
 			pos_y += imd*std::sin(yaw + ang_vel*dt/2);
+			yaw += inc_yaw;
+			inc_yaw = 0;
 		} 
 		// ******************************************************************************************
 		//first, we'll publish the transforms over tf
