@@ -81,6 +81,17 @@ public:
 	 * @return true if success, false otherwise
 	 */
 	virtual bool setVelocity(double linear, double angular) = 0;
+
+ 		/**
+	 * Set the velocity reference
+	 * Transforming to motor unit by using the upo calibration
+	 * @param[in] linear the linear velocity reference in m/s
+	 * @param[in] angular the angular velocity reference in rad/s
+	 * @return true if success, false otherwise
+	 */
+	virtual bool setVelocity2(double linear, double angular) = 0;
+
+
 	/**
 	 * Set the raw velocity
 	 *

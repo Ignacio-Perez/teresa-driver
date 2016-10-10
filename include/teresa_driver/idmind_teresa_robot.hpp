@@ -163,6 +163,7 @@ public:
 	virtual ~IdMindRobot();
 	// Implementation of inherited virtual functions (robot interface)
 	virtual bool setVelocity(double linear, double angular);
+	virtual bool setVelocity2(double linear, double angular);
 	virtual bool setVelocityRaw(int16_t leftWheelRef, int16_t rightWheelRef);
 	virtual bool isStopped();
 	virtual bool getIMD(double& imdl, double& imdr);
@@ -572,6 +573,35 @@ bool IdMindRobot::setVelocity(double linear, double angular)
 	}
 	return setVelocityRaw(v_left,v_right);
 }
+
+
+inline
+bool IdMindRobot::setVelocity2(double linear, double angular)
+{
+	linear=saturateLinearVelocity(linear);
+	angular=saturateAngularVelocity(angular);
+	double left_wheel_velocity = saturateLinearVelocity(linear - ROBOT_RADIUS_M*angular);
+	double right_wheel_velocity = saturateLinearVelocity(linear + ROBOT_RADIUS_M*angular);
+	int16_t v_left=0;
+	int16_t v_right=0;
+	if (left_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || left_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
+		//v_left = (int16_t)std::round(fabs(left_wheel_velocity) * calibration.A_left + calibration.B_left);
+		v_left = (int16_t)std::round(left_wheel_velocity * calibration.A_left + calibration.B_left); 
+		if (calibration.inverse_left_motor) v_left = -v_left;
+		//if (left_wheel_velocity<0) v_left *= -1; 
+	}
+	if (right_wheel_velocity > LINEAR_VELOCITY_ZERO_THRESHOLD || right_wheel_velocity < -LINEAR_VELOCITY_ZERO_THRESHOLD) {
+		//v_right = (int16_t)std::round(fabs(right_wheel_velocity) * calibration.A_right + calibration.B_right);
+		v_right = (int16_t)std::round(right_wheel_velocity * calibration.A_right + calibration.B_right);
+		if (calibration.inverse_right_motor) v_right = -v_right;
+		//if (right_wheel_velocity<0) v_right *= -1; 
+	}
+	return setVelocityRaw(v_left,v_right);
+}
+
+
+
+
 
 inline
 bool IdMindRobot::isStopped()
