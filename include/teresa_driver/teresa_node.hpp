@@ -333,7 +333,7 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 
 		if(deadZoneIsActive) {
 			//if robot is (almost) stopped
-			if(lin_vel < lin_vel_zero_threshold && ang_vel < ang_vel_zero_threshold)
+			if(fabs(lin_vel) < lin_vel_zero_threshold && fabs(ang_vel) < ang_vel_zero_threshold)
 			{
 				if(fabs(cmdLinVel) < lin_vel_dead_zone)
 					cmdLinVel = cmdLinVel>0 ? (lin_vel_dead_zone+0.1) : -(lin_vel_dead_zone+0.1);
