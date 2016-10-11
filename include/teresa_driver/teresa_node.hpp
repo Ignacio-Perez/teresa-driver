@@ -335,11 +335,13 @@ void Node::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 			//if robot is (almost) stopped
 			if(fabs(lin_vel) < lin_vel_zero_threshold && fabs(ang_vel) < ang_vel_zero_threshold)
 			{
-				if(fabs(cmdLinVel) < lin_vel_dead_zone)
-					cmdLinVel = cmdLinVel>0 ? (lin_vel_dead_zone+0.1) : -(lin_vel_dead_zone+0.1);
-
-				if(fabs(cmdAngVel) < ang_vel_dead_zone)
-					cmdAngVel = cmdAngVel>0 ? (ang_vel_dead_zone+0.1) : -(ang_vel_dead_zone+0.1);
+				if(fabs(cmdLinVel) > 0 && fabs(cmdLinVel) < lin_vel_dead_zone && fabs(cmdAngVel) < ang_vel_dead_zone)
+					//cmdLinVel = cmdLinVel>0 ? (lin_vel_dead_zone+0.1) : -(lin_vel_dead_zone+0.1);
+					cmdLinVel = lin_vel_dead_zone+0.1;
+				else					
+				if(fabs(cmdAngVel) > 0 && fabs(cmdAngVel) < ang_vel_dead_zone && fabs(cmdLinVel) < lin_vel_dead_zone)
+					//cmdAngVel = cmdAngVel>0 ? (ang_vel_dead_zone+0.1) : -(ang_vel_dead_zone+0.1);
+					cmdAngVel = ang_vel_dead_zone+0.1;
 			}
 		}
 
