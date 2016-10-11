@@ -34,8 +34,8 @@ namespace Teresa
 #define MIN_HEIGHT_MM                         1260
 #define MAX_HEIGHT_MM                         1425
 
-#define MIN_TILT_ANGLE_DEGREES                 -37
-#define MAX_TILT_ANGLE_DEGREES                  37  
+#define MIN_TILT_ANGLE_DEGREES                 -30
+#define MAX_TILT_ANGLE_DEGREES                  30  
 
 #define ROBOT_DIAMETER_M                      0.47
 #define ROBOT_RADIUS_M                       0.235
