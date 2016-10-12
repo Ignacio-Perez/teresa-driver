@@ -78,6 +78,7 @@ struct Calibration
 #define GET_TEMPERATURE_SENSORS      0x5A
 #define GET_TILT_STATUS              0x5B
 #define GET_HEIGHT_STATUS            0x5C
+#define GET_HEIGHT_DRIVER_STATE      0x5E
 
 // BOARD1 & BOARD2 COMMANDS
 #define GET_FIRMWARE_VERSION_NUMBER  0x20
@@ -201,6 +202,10 @@ private:
 	bool calibrate(bool calibrate_tilt_system, bool calibrate_height_system); // calibrate height and/or tilt system
 	bool setNumberOfLeds(unsigned char number_of_leds); // Set the number of leds	 
 	static void defaultPrint(const std::string& message){std::cout<<message<<std::endl;} // A default printing function
+
+	bool getHeightDriverState(unsigned char& state);
+	bool setHeightDriverState(unsigned char state);
+	
 
 	IdMindBoard board1; // Sensors board
 	IdMindBoard board2; // Motors board
@@ -382,6 +387,22 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
 		throw ("Teresa initialization aborted");
 	}
 
+	// TEST
+	/*unsigned char status;
+	char buffer[256];	
+	getHeightDriverState(status);
+	sprintf(buffer,"Leido %x",status);
+	printInfo(buffer);	
+	for (unsigned char i = 0; i<3; i++) {
+		setHeightDriverState(i);
+		sprintf(buffer,"Escrito %x",i);
+		printInfo(buffer);	
+		getHeightDriverState(status);
+		sprintf(buffer,"Leido %x",status);
+		printInfo(buffer);
+		
+	}*/
+
 }
 
 inline
@@ -468,6 +489,32 @@ bool IdMindRobot::enableTiltMotor(bool enable)
 	}
 	return true;
 }
+
+inline
+bool IdMindRobot::getHeightDriverState(unsigned char& state)
+{
+	board2.command[0] = GET_HEIGHT_DRIVER_STATE;
+	if (!board2.communicate(1,5)) {
+		printError("Cannot get height driver state");
+		return false;
+	}
+	state = board2.command[1];
+	return true;
+}
+
+
+inline
+bool IdMindRobot::setHeightDriverState(unsigned char state)
+{
+	board2.command[0] = SET_HEIGHT_DRIVER_STATE;
+	board2.command[1] = state;
+	if (!board2.communicate(2,4)) {
+		printError("Cannot set height driver state");
+		return false;
+	}		
+	return true;
+}
+
 
 inline
 bool IdMindRobot::enableHeightMotor(bool enable)
