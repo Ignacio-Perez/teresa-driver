@@ -5,7 +5,7 @@
   <!-- KINECT obstacles detection -->
   <include file="$(find openni2_launch)/launch/openni2.launch">
     <arg name="camera" value="xtionNav" />
-    <arg name="device_id" value="4@0" />
+    <arg name="device_id" value="2@0" />
     <arg name="depth_registration" value="false" />
     <arg name="publish_tf" value="true" />
     <arg name="respawn" value="true" />
@@ -24,7 +24,7 @@
   <include file="$(find openni2_launch)/launch/openni2.launch">
     
     <arg name="camera" value="xtionPeople" />
-    <arg name="device_id" value="3@0" /> 
+    <arg name="device_id" value="1@0" /> 
     <arg name="depth_registration" value="true" />
     <arg name="publish_tf" value="false" />
     <arg name="respawn" value="true" />
