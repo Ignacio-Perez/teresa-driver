@@ -95,6 +95,53 @@ private:
 };
 
 
+
+/**
+ * Another red light moving 
+ */ 
+class KnightRiderLeds2 : public Leds
+{
+public:
+	KnightRiderLeds2(unsigned char numberOfLeds)
+	: activated(0)
+	{
+		leds.resize(numberOfLeds*3);
+		set(0,true);
+	}
+	virtual ~KnightRiderLeds2() {}	
+	virtual void update()
+	{
+		set(activated,false);
+		activated++;
+		int numberOfLeds = leds.size()/3;
+		if (activated==numberOfLeds) {
+			activated=0;
+		}
+		set(activated,true);	
+	}
+	virtual const std::vector<unsigned char>& getLeds() const {return leds;}
+private:
+	void set(int led, bool on) {
+		int a = led * 3;
+		int b = led * 3 + 3;
+		if (b >= (int)leds.size()) {
+			b=0;
+		}
+		int c = led * 3 - 3;
+		if (c<0) {
+			c = leds.size()*3 - 3;
+		}
+		leds[a] = on?255:0;
+		leds[b] = on?255:0;
+		leds[c] = on?255:0;
+	}
+
+	int activated;
+	std::vector<unsigned char> leds;
+
+};
+
+
 /**
  * Get the led pattern object from a name, update this function if more patterns are implemented
  * The name can be used in the parameter "leds_pattern" of the launch file
@@ -102,7 +149,7 @@ private:
 Leds *getLedsPattern(const std::string& leds_pattern, unsigned char number_of_leds)
 {
 	if (leds_pattern == "knight_rider") {
-		return new KnightRiderLeds(number_of_leds); 
+		return new KnightRiderLeds2(number_of_leds); 
 	}
 	return NULL;
 }
