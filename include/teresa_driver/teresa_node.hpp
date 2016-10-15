@@ -395,7 +395,11 @@ bool Node::getDCDC(teresa_driver::Get_DCDC::Request  &req,
 inline
 bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 			teresa_driver::Teresa_leds::Response &res)
-{ 
+{
+	if (leds!=NULL) {
+		delete leds;
+		leds = NULL;
+	} 
 	res.success = teresa->setLeds(req.rgb_values);
 	return true;
 }
