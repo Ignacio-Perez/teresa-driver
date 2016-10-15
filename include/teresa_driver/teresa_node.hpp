@@ -177,7 +177,7 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<int>("publish_buttons", publish_buttons, 1);
 		pn.param<int>("publish_volume", publish_volume, 1);
 		pn.param<int>("publish_diagnostics",publish_diagnostics,1);
-		pn.param<int>("number_of_leds",number_of_leds,38);
+		pn.param<int>("number_of_leds",number_of_leds,60);
 		pn.param<int>("initial_dcdc_mask",initial_dcdc_mask,0xFF);
 		pn.param<int>("final_dcdc_mask",final_dcdc_mask,0x00);
 		pn.param<double>("freq",freq,20);
