@@ -205,6 +205,8 @@ private:
 
 	bool getHeightDriverState(unsigned char& state);
 	bool setHeightDriverState(unsigned char state);
+
+	bool getHeightStatus(unsigned char& status);
 	
 
 	IdMindBoard board1; // Sensors board
@@ -387,12 +389,21 @@ IdMindRobot::IdMindRobot(const std::string& board1,const std::string& board2,
 		throw ("Teresa initialization aborted");
 	}
 
+
+
 	// TEST
-	/*unsigned char status;
+	/*
+	unsigned char status;
 	char buffer[256];	
 	getHeightDriverState(status);
-	sprintf(buffer,"Leido %x",status);
+	sprintf(buffer,"Height driver state (0x5E): 0x%X",status);
+	printInfo(buffer);
+
+	getHeightStatus(status);
+	sprintf(buffer,"Height status (0x5C): 0x%X",status);
 	printInfo(buffer);	
+	
+		
 	for (unsigned char i = 0; i<3; i++) {
 		setHeightDriverState(i);
 		sprintf(buffer,"Escrito %x",i);
@@ -498,7 +509,19 @@ bool IdMindRobot::getHeightDriverState(unsigned char& state)
 		printError("Cannot get height driver state");
 		return false;
 	}
-	state = board2.command[1];
+	state = board2.response[1];
+	return true;
+}
+
+inline
+bool IdMindRobot::getHeightStatus(unsigned char& status)
+{
+	board2.command[0] = GET_HEIGHT_STATUS;
+	if (!board2.communicate(1,5)) {
+		printError("Cannot get height status");
+		return false;
+	}
+	status = board2.response[1];
 	return true;
 }
 

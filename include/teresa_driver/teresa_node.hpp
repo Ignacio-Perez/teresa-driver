@@ -481,10 +481,12 @@ void Node::loop()
 		odom_trans.transform.rotation = tf::createQuaternionMsgFromRollPitchYaw(0.0, 0.0, yaw);
 		tf_broadcaster.sendTransform(odom_trans);
 		if (teresa->getHeight(height_in_millimeters)) {
+			//ROS_INFO("%d",height_in_millimeters);
 			height_in_meters= (double)height_in_millimeters * 0.001;
 		}
 		
         	if (teresa->getTilt(tilt_in_degrees)) {
+			//ROS_INFO("%d",tilt_in_degrees);
 			tilt_in_radians = tilt_in_degrees * 0.0174533;
 		}
 
