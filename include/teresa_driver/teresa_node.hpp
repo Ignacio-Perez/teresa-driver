@@ -396,6 +396,11 @@ inline
 bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 			teresa_driver::Teresa_leds::Response &res)
 {
+	if (req.rgb_values.size() != number_of_leds) {
+		res.success = false;
+		retur true;
+	}
+
 	if (leds!=NULL) {
 		delete leds;
 		leds = NULL;
