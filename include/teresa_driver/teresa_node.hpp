@@ -99,6 +99,7 @@ private:
 	int height_velocity; // The configured heght motor velocity in mm/s
 	int tilt_velocity; // The configured tilt motor velocity in degrees/s
 	double freq; // Main loop frequency;
+        int number_of_leds; // Number of leds
 	bool use_upo_calib;
 	// Frame IDs
 	std::string base_frame_id;
@@ -163,7 +164,7 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		std::string board1;
 		std::string board2;
 		std::string leds_pattern;
-		int initial_dcdc_mask,final_dcdc_mask,number_of_leds;
+		int initial_dcdc_mask,final_dcdc_mask;
 	        // Parameters
 		pn.param<std::string>("board1",board1,"/dev/ttyUSB0");
 		pn.param<std::string>("board2",board2,"/dev/ttyUSB1");
@@ -396,9 +397,9 @@ inline
 bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 			teresa_driver::Teresa_leds::Response &res)
 {
-	if (req.rgb_values.size() != number_of_leds) {
+	if ((int)req.rgb_values.size() != number_of_leds) {
 		res.success = false;
-		retur true;
+		return true;
 	}
 
 	if (leds!=NULL) {
