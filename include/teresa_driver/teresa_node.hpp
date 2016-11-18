@@ -187,10 +187,10 @@ Node::Node(ros::NodeHandle& n, ros::NodeHandle& pn)
 		pn.param<bool>("inverse_left_motor",calibration.inverse_left_motor,true);
 		pn.param<bool>("inverse_right_motor",calibration.inverse_right_motor,false);
 		pn.param<std::string>("leds_pattern",leds_pattern,"null");
-		pn.param<double>("A_left",calibration.A_left,210.0);
-		pn.param<double>("B_left",calibration.B_left,8.35);
-		pn.param<double>("A_right",calibration.A_right,210.0);
-		pn.param<double>("B_right",calibration.B_right,8.35);
+		pn.param<double>("A_left",calibration.A_left,41.2); //210.0);
+		pn.param<double>("B_left",calibration.B_left,0.0); //8.35);
+		pn.param<double>("A_right",calibration.A_right,41.2); //210.0);
+		pn.param<double>("B_right",calibration.B_right,0.0); //8.35);
 		pn.param<bool>("use_upo_calib",use_upo_calib, true);
 		pn.param<bool>("deadZoneIsActive", deadZoneIsActive, true);
 		pn.param<double>("lin_vel_dead_zone",lin_vel_dead_zone,0.15);
