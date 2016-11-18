@@ -26,6 +26,7 @@ add_message_files(
   Temperature.msg
   Diagnostics.msg
   CmdVelRaw.msg
+  WheelVels.msg
 )
 
 add_service_files(
@@ -57,6 +58,9 @@ add_executable(teresa_node src/teresa_node.cpp)
 add_dependencies(teresa_node teresa_driver_gencpp teresa_driver_generate_messages_cpp)
 add_executable(teresa_teleop_joy src/teresa_teleop_joy.cpp)
 add_dependencies(teresa_teleop_joy teresa_driver_gencpp teresa_driver_generate_messages_cpp)
+add_executable(teresa_node_calib src/teresa_node_calib.cpp)
+add_dependencies(teresa_node_calib teresa_driver_gencpp teresa_driver_generate_messages_cpp)
+
 
 target_link_libraries(teresa_node
    ${catkin_LIBRARIES}
@@ -65,3 +69,9 @@ target_link_libraries(teresa_node
 target_link_libraries(teresa_teleop_joy
    ${catkin_LIBRARIES}
 )
+
+target_link_libraries(teresa_node_calib
+   ${catkin_LIBRARIES}
+)
+
+
