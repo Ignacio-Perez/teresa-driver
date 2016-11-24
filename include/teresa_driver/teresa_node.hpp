@@ -397,7 +397,7 @@ inline
 bool Node::teresaLeds(teresa_driver::Teresa_leds::Request &req,
 			teresa_driver::Teresa_leds::Response &res)
 {
-	if ((int)req.rgb_values.size() != number_of_leds) {
+	if ((int)req.rgb_values.size() != (number_of_leds*3)) {
 		res.success = false;
 		return true;
 	}
